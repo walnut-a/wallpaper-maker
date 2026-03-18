@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallpaper Maker</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page-bg: #f4efe8;
+        --page-tint: #ede6dd;
+        --panel-bg: rgba(250, 246, 241, 0.94);
+        --panel-border: rgba(77, 64, 53, 0.12);
+        --preview-shell: rgba(250, 248, 244, 0.96);
+        --preview-border: rgba(78, 63, 50, 0.1);
+        --text-strong: #2d231c;
+        --text-main: #56483d;
+        --text-muted: #87786c;
+        --accent: #8a6049;
+        --accent-soft: rgba(138, 96, 73, 0.12);
+        --accent-strong: #704634;
+        --danger: #b4513d;
+        --shadow-soft: 0 18px 60px rgba(72, 53, 40, 0.08);
+        --shadow-preview: 0 24px 80px rgba(54, 41, 30, 0.12);
+        --radius-xl: 28px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --panel-width: min(25rem, 100%);
+        --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Baskerville", serif;
+        --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top left, rgba(173, 141, 120, 0.12), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(123, 104, 87, 0.08), transparent 32%),
+          linear-gradient(180deg, var(--page-bg), var(--page-tint));
+        color: var(--text-main);
+        font-family: var(--font-body);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app-shell {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: minmax(18rem, var(--panel-width)) minmax(0, 1fr);
+      }
+
+      .control-panel {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding: 1.5rem;
+        background: var(--panel-bg);
+        border-right: 1px solid var(--panel-border);
+        box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.3);
+        z-index: 1;
+      }
+
+      .panel-head {
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .eyebrow {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        font-size: 0.72rem;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--text-strong);
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 2.8vw, 2.8rem);
+        font-weight: 600;
+        line-height: 0.95;
+      }
+
+      .panel-intro {
+        margin: 0;
+        max-width: 26ch;
+        color: var(--text-muted);
+        line-height: 1.55;
+        font-size: 0.95rem;
+      }
+
+      .feedback {
+        min-height: 1.35rem;
+        padding: 0.2rem 0;
+        color: var(--text-muted);
+        font-size: 0.87rem;
+      }
+
+      .feedback[data-tone="error"] {
+        color: var(--danger);
+      }
+
+      .feedback[data-tone="success"] {
+        color: var(--accent-strong);
+      }
+
+      .panel-section {
+        display: grid;
+        gap: 0.85rem;
+        padding-top: 1.1rem;
+        border-top: 1px solid rgba(77, 64, 53, 0.1);
+      }
+
+      .panel-section:first-of-type {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .section-title {
+        margin: 0;
+        color: var(--text-strong);
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .preset-grid {
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .preset-option {
+        display: grid;
+        gap: 0.28rem;
+        width: 100%;
+        padding: 0.95rem 1rem;
+        border: 1px solid rgba(77, 64, 53, 0.12);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.52);
+        text-align: left;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+      }
+
+      .preset-option:hover,
+      .preset-option:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(112, 70, 52, 0.28);
+        background: rgba(255, 255, 255, 0.78);
+        outline: none;
+      }
+
+      .preset-option.is-active {
+        background: linear-gradient(180deg, rgba(138, 96, 73, 0.13), rgba(138, 96, 73, 0.06));
+        border-color: rgba(112, 70, 52, 0.28);
+        box-shadow: 0 12px 32px rgba(77, 61, 47, 0.08);
+      }
+
+      .preset-name {
+        color: var(--text-strong);
+        font-size: 0.96rem;
+        font-weight: 600;
+      }
+
+      .preset-note {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .two-column {
+        display: grid;
+        gap: 0.8rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field {
+        display: grid;
+        gap: 0.38rem;
+      }
+
+      .field label,
+      .slider-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.6rem;
+        color: var(--text-main);
+        font-size: 0.84rem;
+        font-weight: 500;
+      }
+
+      .value-badge {
+        color: var(--text-muted);
+        font-size: 0.76rem;
+      }
+
+      .field input[type="number"],
+      .field select {
+        width: 100%;
+        height: 2.9rem;
+        padding: 0 0.9rem;
+        border: 1px solid rgba(77, 64, 53, 0.14);
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--text-strong);
+      }
+
+      .field input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .field input:focus-visible,
+      .field select:focus-visible,
+      .action-button:focus-visible,
+      .preset-option:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid rgba(112, 70, 52, 0.24);
+        outline-offset: 2px;
+      }
+
+      .field-help {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        line-height: 1.4;
+      }
+
+      .action-grid {
+        display: grid;
+        gap: 0.7rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .action-button {
+        min-height: 3rem;
+        padding: 0.8rem 1rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(77, 64, 53, 0.12);
+        background: rgba(255, 255, 255, 0.64);
+        color: var(--text-strong);
+        cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+
+      .action-button:hover {
+        transform: translateY(-1px);
+        border-color: rgba(112, 70, 52, 0.28);
+        background: rgba(255, 255, 255, 0.86);
+      }
+
+      .action-button.primary {
+        background: linear-gradient(180deg, rgba(138, 96, 73, 0.16), rgba(138, 96, 73, 0.1));
+        border-color: rgba(112, 70, 52, 0.28);
+      }
+
+      .advanced-panel {
+        border: 1px solid rgba(77, 64, 53, 0.1);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.44);
+        overflow: clip;
+      }
+
+      .advanced-panel summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.05rem;
+        cursor: pointer;
+        color: var(--text-strong);
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+
+      .advanced-panel summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .advanced-hint {
+        color: var(--text-muted);
+        font-size: 0.76rem;
+        font-weight: 400;
+      }
+
+      .advanced-panel[open] summary {
+        border-bottom: 1px solid rgba(77, 64, 53, 0.08);
+      }
+
+      .advanced-content {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem 1.05rem 1.1rem;
+      }
+
+      .advanced-group {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .advanced-group-title {
+        color: var(--text-strong);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .preview-panel {
+        display: grid;
+        place-items: stretch;
+        padding: clamp(1rem, 2vw, 1.6rem);
+      }
+
+      .preview-stage {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 0;
+        padding: clamp(1rem, 2vw, 2rem);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(246, 240, 232, 0.92)),
+          var(--preview-shell);
+        border: 1px solid var(--preview-border);
+        box-shadow: var(--shadow-soft);
+        overflow: hidden;
+      }
+
+      .preview-stage::before {
+        content: "";
+        position: absolute;
+        inset: 1rem;
+        border-radius: calc(var(--radius-xl) - 10px);
+        border: 1px solid rgba(77, 64, 53, 0.08);
+        pointer-events: none;
+      }
+
+      #wallpaperCanvas {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: calc(var(--radius-lg) - 2px);
+        box-shadow: var(--shadow-preview);
+        background: #e8ddd1;
+      }
+
+      .preview-meta {
+        position: absolute;
+        right: clamp(1.1rem, 1.8vw, 1.6rem);
+        bottom: clamp(1.1rem, 1.8vw, 1.6rem);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        padding: 0.7rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(252, 248, 242, 0.78);
+        border: 1px solid rgba(77, 64, 53, 0.12);
+        backdrop-filter: blur(8px);
+        color: var(--text-main);
+        font-size: 0.78rem;
+      }
+
+      .preview-meta strong {
+        color: var(--text-strong);
+        font-weight: 600;
+      }
+
+      @media (max-width: 960px) {
+        .app-shell {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(42vh, 48vh) auto;
+        }
+
+        .control-panel {
+          order: 2;
+          border-right: 0;
+          border-top: 1px solid var(--panel-border);
+          padding: 1.15rem 1rem 1.4rem;
+        }
+
+        .preview-panel {
+          order: 1;
+          min-height: 50vh;
+          padding: 0.9rem;
+        }
+
+        .panel-intro {
+          max-width: 34ch;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .action-grid,
+        .two-column {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: clamp(1.7rem, 8vw, 2.3rem);
+        }
+
+        .preview-meta {
+          left: 1rem;
+          right: 1rem;
+          justify-content: space-between;
+          border-radius: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="control-panel">
+        <header class="panel-head">
+          <span class="eyebrow">Wallpaper Maker</span>
+          <h1>几何壁纸</h1>
+          <p class="panel-intro">
+            打开就有成品图，先看结果，再慢慢调。左侧只放高频控制，细项收进高级参数里。
+          </p>
+          <div id="feedback" class="feedback" aria-live="polite"></div>
+        </header>
+
+        <section class="panel-section" aria-labelledby="preset-heading">
+          <h2 id="preset-heading" class="section-title">风格预设</h2>
+          <div id="presetGrid" class="preset-grid"></div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="size-heading">
+          <h2 id="size-heading" class="section-title">尺寸与基础参数</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="sizePreset">尺寸预设</label>
+              <select id="sizePreset" name="sizePreset"></select>
+            </div>
+            <div class="two-column">
+              <div class="field">
+                <label for="widthInput">宽度</label>
+                <input id="widthInput" name="width" type="number" min="320" max="6000" step="1" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label for="heightInput">高度</label>
+                <input id="heightInput" name="height" type="number" min="320" max="6000" step="1" inputmode="numeric" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="paletteSelect">调色板</label>
+              <select id="paletteSelect" name="palette"></select>
+            </div>
+            <div class="field">
+              <div class="slider-header">
+                <label for="densityInput">密度</label>
+                <span id="densityValue" class="value-badge">45%</span>
+              </div>
+              <input id="densityInput" name="density" type="range" min="0.15" max="0.95" step="0.01" />
+            </div>
+            <div class="field">
+              <div class="slider-header">
+                <label for="complexityInput">复杂度</label>
+                <span id="complexityValue" class="value-badge">50%</span>
+              </div>
+              <input id="complexityInput" name="complexity" type="range" min="0.1" max="0.95" step="0.01" />
+            </div>
+            <div class="field">
+              <label for="seedInput">随机种子</label>
+              <input id="seedInput" name="seed" type="number" min="1" max="999999999" step="1" inputmode="numeric" />
+              <div class="field-help">相同参数和相同种子会得到相同画面。</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="actions-heading">
+          <h2 id="actions-heading" class="section-title">动作</h2>
+          <div class="action-grid">
+            <button id="regenerateButton" class="action-button" type="button">重新生成</button>
+            <button id="randomizeButton" class="action-button" type="button">随机参数</button>
+            <button id="resetButton" class="action-button" type="button">重置当前预设</button>
+            <button id="exportButton" class="action-button primary" type="button">导出 PNG</button>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="advanced-heading">
+          <h2 id="advanced-heading" class="section-title">高级参数</h2>
+          <details id="advancedPanel" class="advanced-panel">
+            <summary>
+              <span>展开细调</span>
+              <span class="advanced-hint">默认收起，避免参数墙</span>
+            </summary>
+            <div id="advancedContent" class="advanced-content"></div>
+          </details>
+        </section>
+      </aside>
+
+      <section class="preview-panel">
+        <div id="previewStage" class="preview-stage">
+          <canvas id="wallpaperCanvas" aria-label="壁纸预览"></canvas>
+          <div class="preview-meta">
+            <span><strong id="previewPresetLabel">极简秩序感</strong></span>
+            <span id="previewSizeLabel">1290 × 2796</span>
+            <span id="previewPaletteLabel">暮光陶土</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const sizePresets = [
+        { value: "iphone-pro-max", label: "iPhone Pro Max", width: 1290, height: 2796 },
+        { value: "iphone-pro", label: "iPhone Pro", width: 1179, height: 2556 },
+        { value: "android-tall", label: "Android 高屏", width: 1440, height: 3200 },
+        { value: "classic-9-16", label: "传统 9:16", width: 1080, height: 1920 },
+      ];
+
+      const palettes = {
+        dawn: {
+          label: "暮光陶土",
+          backgroundA: "#f3ece3",
+          backgroundB: "#ddd0c0",
+          surface: "#b59c85",
+          ink: "#403128",
+          accent: "#a56750",
+          accentSoft: "#d3b29b",
+        },
+        harbor: {
+          label: "港口薄雾",
+          backgroundA: "#eef1ee",
+          backgroundB: "#d7dfda",
+          surface: "#9db0a4",
+          ink: "#283532",
+          accent: "#728f86",
+          accentSoft: "#bfcfc7",
+        },
+        linen: {
+          label: "亚麻石灰",
+          backgroundA: "#f4f0e8",
+          backgroundB: "#ded5c5",
+          surface: "#c5b49a",
+          ink: "#43382d",
+          accent: "#8b6d4f",
+          accentSoft: "#dbcab5",
+        },
+        dusk: {
+          label: "暮海灰蓝",
+          backgroundA: "#eceef1",
+          backgroundB: "#d2d6dd",
+          surface: "#8f9aaa",
+          ink: "#2b3039",
+          accent: "#6c7b92",
+          accentSoft: "#bbc3cf",
+        },
+        mineral: {
+          label: "矿物砂红",
+          backgroundA: "#f5eee7",
+          backgroundB: "#e5d1c2",
+          surface: "#b98973",
+          ink: "#422b25",
+          accent: "#b35f4f",
+          accentSoft: "#e1b5a7",
+        },
+      };
+
+      const presetDefinitions = {
+        "minimal-grid": {
+          label: "极简秩序感",
+          note: "细线、留白和低对比节奏，适合做默认画面。",
+          defaults: {
+            palette: "dawn",
+            density: 0.44,
+            complexity: 0.42,
+            advanced: {
+              gridScale: 0.44,
+              lineWeight: 0.28,
+              marginRatio: 0.14,
+              gradientTilt: 0.42,
+              alignment: 0.88,
+              noise: 0.18,
+            },
+          },
+          groups: [
+            {
+              title: "构图",
+              controls: [
+                { key: "gridScale", label: "网格尺度", min: 0.12, max: 0.8, step: 0.01, format: "percent" },
+                { key: "lineWeight", label: "线条强度", min: 0.08, max: 0.8, step: 0.01, format: "percent" },
+                { key: "marginRatio", label: "留白比例", min: 0.05, max: 0.24, step: 0.01, format: "percent" },
+              ],
+            },
+            {
+              title: "节奏",
+              controls: [
+                { key: "gradientTilt", label: "渐变倾斜", min: 0, max: 1, step: 0.01, format: "percent" },
+                { key: "alignment", label: "对齐强度", min: 0.25, max: 1, step: 0.01, format: "percent" },
+                { key: "noise", label: "颗粒密度", min: 0, max: 0.45, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "bold-blocks": {
+          label: "大色块构成",
+          note: "矩形、圆和弧面的叠层关系更强，画面更有重心。",
+          defaults: {
+            palette: "mineral",
+            density: 0.58,
+            complexity: 0.63,
+            advanced: {
+              blockCount: 0.62,
+              radiusBias: 0.54,
+              overlap: 0.52,
+              insetRatio: 0.13,
+              arcSweep: 0.58,
+              contrastBoost: 0.48,
+            },
+          },
+          groups: [
+            {
+              title: "块面",
+              controls: [
+                { key: "blockCount", label: "图形数量", min: 0.18, max: 0.92, step: 0.01, format: "percent" },
+                { key: "radiusBias", label: "圆角倾向", min: 0, max: 1, step: 0.01, format: "percent" },
+                { key: "overlap", label: "重叠程度", min: 0.1, max: 0.9, step: 0.01, format: "percent" },
+              ],
+            },
+            {
+              title: "张力",
+              controls: [
+                { key: "insetRatio", label: "内收边距", min: 0.02, max: 0.18, step: 0.01, format: "percent" },
+                { key: "arcSweep", label: "弧面幅度", min: 0.1, max: 0.95, step: 0.01, format: "percent" },
+                { key: "contrastBoost", label: "对比提升", min: 0.05, max: 0.9, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "tech-texture": {
+          label: "科技纹理感",
+          note: "放射线、扫描纹理和局部亮区更密，适合做有速度感的背景。",
+          defaults: {
+            palette: "dusk",
+            density: 0.55,
+            complexity: 0.66,
+            advanced: {
+              beamDensity: 0.62,
+              scanlineStrength: 0.45,
+              focalOffset: 0.38,
+              grain: 0.22,
+              glow: 0.54,
+              ringSpread: 0.57,
+            },
+          },
+          groups: [
+            {
+              title: "束线",
+              controls: [
+                { key: "beamDensity", label: "线束密度", min: 0.2, max: 0.95, step: 0.01, format: "percent" },
+                { key: "scanlineStrength", label: "扫描线强度", min: 0, max: 0.8, step: 0.01, format: "percent" },
+                { key: "focalOffset", label: "中心偏移", min: 0, max: 0.8, step: 0.01, format: "percent" },
+              ],
+            },
+            {
+              title: "纹理",
+              controls: [
+                { key: "grain", label: "颗粒粗细", min: 0, max: 0.45, step: 0.01, format: "percent" },
+                { key: "glow", label: "高亮范围", min: 0.08, max: 0.9, step: 0.01, format: "percent" },
+                { key: "ringSpread", label: "环形扩散", min: 0.1, max: 0.9, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "organic-flow": {
+          label: "有机生成感",
+          note: "曲线、波纹和轻微扰动更明显，画面像慢速流动的层。",
+          defaults: {
+            palette: "harbor",
+            density: 0.48,
+            complexity: 0.57,
+            advanced: {
+              waveCount: 0.54,
+              amplitude: 0.46,
+              smoothness: 0.72,
+              turbulence: 0.35,
+              veilOpacity: 0.4,
+              drift: 0.52,
+            },
+          },
+          groups: [
+            {
+              title: "流线",
+              controls: [
+                { key: "waveCount", label: "流线数量", min: 0.18, max: 0.92, step: 0.01, format: "percent" },
+                { key: "amplitude", label: "波动幅度", min: 0.08, max: 0.85, step: 0.01, format: "percent" },
+                { key: "smoothness", label: "平滑程度", min: 0.15, max: 0.95, step: 0.01, format: "percent" },
+              ],
+            },
+            {
+              title: "漂移",
+              controls: [
+                { key: "turbulence", label: "扰动强度", min: 0, max: 0.7, step: 0.01, format: "percent" },
+                { key: "veilOpacity", label: "层叠透明度", min: 0.05, max: 0.75, step: 0.01, format: "percent" },
+                { key: "drift", label: "漂移偏移", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+      };
+
+      const elements = {
+        presetGrid: document.getElementById("presetGrid"),
+        sizePreset: document.getElementById("sizePreset"),
+        widthInput: document.getElementById("widthInput"),
+        heightInput: document.getElementById("heightInput"),
+        paletteSelect: document.getElementById("paletteSelect"),
+        densityInput: document.getElementById("densityInput"),
+        densityValue: document.getElementById("densityValue"),
+        complexityInput: document.getElementById("complexityInput"),
+        complexityValue: document.getElementById("complexityValue"),
+        seedInput: document.getElementById("seedInput"),
+        regenerateButton: document.getElementById("regenerateButton"),
+        randomizeButton: document.getElementById("randomizeButton"),
+        resetButton: document.getElementById("resetButton"),
+        exportButton: document.getElementById("exportButton"),
+        feedback: document.getElementById("feedback"),
+        advancedPanel: document.getElementById("advancedPanel"),
+        advancedContent: document.getElementById("advancedContent"),
+        previewStage: document.getElementById("previewStage"),
+        canvas: document.getElementById("wallpaperCanvas"),
+        previewPresetLabel: document.getElementById("previewPresetLabel"),
+        previewSizeLabel: document.getElementById("previewSizeLabel"),
+        previewPaletteLabel: document.getElementById("previewPaletteLabel"),
+      };
+
+      function buildDefaultState(presetKey) {
+        const preset = presetDefinitions[presetKey];
+        return {
+          preset: presetKey,
+          sizePreset: sizePresets[0].value,
+          width: sizePresets[0].width,
+          height: sizePresets[0].height,
+          seed: 314159,
+          palette: preset.defaults.palette,
+          density: preset.defaults.density,
+          complexity: preset.defaults.complexity,
+          advanced: { ...preset.defaults.advanced },
+        };
+      }
+
+      let state = buildDefaultState("minimal-grid");
+      let lastValidDimensions = { width: state.width, height: state.height };
+      let feedbackTimer = 0;
+      let renderToken = 0;
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function normalizeSeed(seed) {
+        const numeric = Number.isFinite(Number(seed)) ? Math.abs(Math.trunc(Number(seed))) : 1;
+        return numeric === 0 ? 1 : numeric % 2147483647;
+      }
+
+      function makeRng(seed) {
+        let current = normalizeSeed(seed);
+        return function next() {
+          current += 0x6d2b79f5;
+          let result = Math.imul(current ^ (current >>> 15), current | 1);
+          result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+          return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function choose(rng, items) {
+        return items[Math.floor(rng() * items.length)];
+      }
+
+      function formatPercent(value) {
+        return `${Math.round(Number(value) * 100)}%`;
+      }
+
+      function setFeedback(message, tone = "neutral", hold = 2200) {
+        elements.feedback.textContent = message;
+        elements.feedback.dataset.tone = tone;
+        window.clearTimeout(feedbackTimer);
+        if (message) {
+          feedbackTimer = window.setTimeout(() => {
+            elements.feedback.textContent = "";
+            elements.feedback.dataset.tone = "neutral";
+          }, hold);
+        }
+      }
+
+      function findMatchingSizePreset(width, height) {
+        const found = sizePresets.find((item) => item.width === width && item.height === height);
+        return found ? found.value : "custom";
+      }
+
+      function updateDerivedSizePreset() {
+        state.sizePreset = findMatchingSizePreset(state.width, state.height);
+      }
+
+      function presetAccentAlpha(stateValue, floor = 0.14, ceiling = 0.72) {
+        return floor + (ceiling - floor) * clamp(stateValue, 0, 1);
+      }
+
+      function buildPresetButtons() {
+        elements.presetGrid.innerHTML = "";
+        Object.entries(presetDefinitions).forEach(([key, config]) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "preset-option";
+          button.dataset.preset = key;
+          button.innerHTML = `
+            <span class="preset-name">${config.label}</span>
+            <span class="preset-note">${config.note}</span>
+          `;
+          button.addEventListener("click", () => switchPreset(key));
+          elements.presetGrid.appendChild(button);
+        });
+      }
+
+      function buildSelectOptions() {
+        elements.sizePreset.innerHTML = "";
+        sizePresets.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.textContent = `${item.label} · ${item.width} × ${item.height}`;
+          elements.sizePreset.appendChild(option);
+        });
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "自定义";
+        elements.sizePreset.appendChild(customOption);
+
+        elements.paletteSelect.innerHTML = "";
+        Object.entries(palettes).forEach(([key, palette]) => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = palette.label;
+          elements.paletteSelect.appendChild(option);
+        });
+      }
+
+      function formatAdvancedValue(control, value) {
+        if (control.format === "percent") {
+          return formatPercent(value);
+        }
+        return `${Number(value).toFixed(2)}`;
+      }
+
+      function renderAdvancedControls() {
+        const preset = presetDefinitions[state.preset];
+        elements.advancedContent.innerHTML = "";
+
+        preset.groups.forEach((group) => {
+          const wrapper = document.createElement("section");
+          wrapper.className = "advanced-group";
+
+          const title = document.createElement("div");
+          title.className = "advanced-group-title";
+          title.textContent = group.title;
+          wrapper.appendChild(title);
+
+          group.controls.forEach((control) => {
+            const field = document.createElement("div");
+            field.className = "field";
+
+            const header = document.createElement("div");
+            header.className = "slider-header";
+
+            const label = document.createElement("label");
+            label.htmlFor = `advanced-${control.key}`;
+            label.textContent = control.label;
+
+            const value = document.createElement("span");
+            value.className = "value-badge";
+            value.id = `advanced-value-${control.key}`;
+            value.textContent = formatAdvancedValue(control, state.advanced[control.key]);
+
+            header.appendChild(label);
+            header.appendChild(value);
+
+            const input = document.createElement("input");
+            input.type = "range";
+            input.id = `advanced-${control.key}`;
+            input.min = String(control.min);
+            input.max = String(control.max);
+            input.step = String(control.step);
+            input.value = String(state.advanced[control.key]);
+            input.dataset.advancedKey = control.key;
+            input.addEventListener("input", (event) => {
+              const nextValue = Number(event.currentTarget.value);
+              state.advanced[control.key] = nextValue;
+              value.textContent = formatAdvancedValue(control, nextValue);
+              queueRender();
+            });
+
+            field.appendChild(header);
+            field.appendChild(input);
+            wrapper.appendChild(field);
+          });
+
+          elements.advancedContent.appendChild(wrapper);
+        });
+      }
+
+      function syncPresetSelection() {
+        elements.presetGrid.querySelectorAll(".preset-option").forEach((button) => {
+          button.classList.toggle("is-active", button.dataset.preset === state.preset);
+        });
+      }
+
+      function syncControlValues() {
+        elements.sizePreset.value = state.sizePreset;
+        elements.widthInput.value = String(state.width);
+        elements.heightInput.value = String(state.height);
+        elements.paletteSelect.value = state.palette;
+        elements.densityInput.value = String(state.density);
+        elements.complexityInput.value = String(state.complexity);
+        elements.seedInput.value = String(state.seed);
+        elements.densityValue.textContent = formatPercent(state.density);
+        elements.complexityValue.textContent = formatPercent(state.complexity);
+        elements.previewPresetLabel.textContent = presetDefinitions[state.preset].label;
+        elements.previewSizeLabel.textContent = `${state.width} × ${state.height}`;
+        elements.previewPaletteLabel.textContent = palettes[state.palette].label;
+      }
+
+      function mergePresetDefaults(presetKey, preservePalette = false) {
+        const preset = presetDefinitions[presetKey];
+        state = {
+          ...state,
+          preset: presetKey,
+          density: preset.defaults.density,
+          complexity: preset.defaults.complexity,
+          palette: preservePalette ? state.palette : preset.defaults.palette,
+          advanced: { ...preset.defaults.advanced },
+        };
+      }
+
+      function switchPreset(presetKey) {
+        mergePresetDefaults(presetKey);
+        syncPresetSelection();
+        updateDerivedSizePreset();
+        syncControlValues();
+        renderAdvancedControls();
+        setFeedback(`已切换到${presetDefinitions[presetKey].label}`, "success");
+        queueRender();
+      }
+
+      function applySizePreset(value) {
+        const preset = sizePresets.find((item) => item.value === value);
+        if (!preset) {
+          state.sizePreset = "custom";
+          return;
+        }
+        state.width = preset.width;
+        state.height = preset.height;
+        state.sizePreset = preset.value;
+        lastValidDimensions = { width: state.width, height: state.height };
+        syncControlValues();
+        queueRender();
+      }
+
+      function validateDimensionInput(fieldName) {
+        const input = fieldName === "width" ? elements.widthInput : elements.heightInput;
+        const parsed = Number(input.value);
+        if (!Number.isFinite(parsed) || parsed < 320 || parsed > 6000) {
+          input.value = String(lastValidDimensions[fieldName]);
+          setFeedback(`${fieldName === "width" ? "宽度" : "高度"}需要在 320 到 6000 之间`, "error", 2600);
+          return false;
+        }
+        const normalized = Math.round(parsed);
+        state[fieldName] = normalized;
+        lastValidDimensions[fieldName] = normalized;
+        updateDerivedSizePreset();
+        syncControlValues();
+        return true;
+      }
+
+      function nextSeed() {
+        return Math.floor(Date.now() % 1000000000) + 1;
+      }
+
+      function randomizeCurrentPreset() {
+        const rng = makeRng(nextSeed());
+        const preset = presetDefinitions[state.preset];
+        state.seed = Math.floor(rng() * 999999999) + 1;
+        state.palette = choose(rng, Object.keys(palettes));
+        state.density = Number((0.2 + rng() * 0.62).toFixed(2));
+        state.complexity = Number((0.2 + rng() * 0.68).toFixed(2));
+        const nextAdvanced = {};
+        preset.groups.forEach((group) => {
+          group.controls.forEach((control) => {
+            const randomized = control.min + rng() * (control.max - control.min);
+            nextAdvanced[control.key] = Number(randomized.toFixed(2));
+          });
+        });
+        state.advanced = nextAdvanced;
+        syncControlValues();
+        renderAdvancedControls();
+        queueRender();
+      }
+
+      function resetCurrentPreset() {
+        const currentPreset = state.preset;
+        mergePresetDefaults(currentPreset, false);
+        state.seed = 314159;
+        state.width = lastValidDimensions.width;
+        state.height = lastValidDimensions.height;
+        state.sizePreset = findMatchingSizePreset(state.width, state.height);
+        syncControlValues();
+        renderAdvancedControls();
+        queueRender();
+        setFeedback("当前预设已恢复默认参数", "success");
+      }
+
+      function line(ctx, x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function drawBackground(ctx, width, height, palette, preset, currentState, rng) {
+        const gradient = ctx.createLinearGradient(0, 0, width, height * (0.5 + currentState.advanced.gradientTilt || 0.35));
+        gradient.addColorStop(0, palette.backgroundA);
+        gradient.addColorStop(1, palette.backgroundB);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        const haloX = width * (0.18 + rng() * 0.2);
+        const haloY = height * (0.16 + rng() * 0.22);
+        const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, Math.max(width, height) * 0.72);
+        halo.addColorStop(0, `${palette.accentSoft}aa`);
+        halo.addColorStop(1, `${palette.accentSoft}00`);
+        ctx.fillStyle = halo;
+        ctx.fillRect(0, 0, width, height);
+
+        if (preset === "tech-texture") {
+          const glow = ctx.createRadialGradient(width * 0.76, height * 0.22, 0, width * 0.76, height * 0.22, width * 0.7);
+          glow.addColorStop(0, `${palette.accent}20`);
+          glow.addColorStop(1, `${palette.accent}00`);
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, width, height);
+        }
+      }
+
+      function drawMinimalGeometry(ctx, width, height, palette, currentState, rng) {
+        const densityFactor = 1 - currentState.density * 0.62;
+        const spacing = width * (0.016 + densityFactor * 0.026 + currentState.advanced.gridScale * 0.065);
+        const margin = width * currentState.advanced.marginRatio;
+        const lineAlpha = presetAccentAlpha(currentState.advanced.lineWeight, 0.12, 0.44);
+        ctx.strokeStyle = `${palette.ink}${Math.round(lineAlpha * 255).toString(16).padStart(2, "0")}`;
+        ctx.lineWidth = 1 + currentState.advanced.lineWeight * 3;
+
+        for (let x = margin; x < width - margin; x += spacing) {
+          const offset = (1 - currentState.advanced.alignment) * spacing * (rng() - 0.5);
+          line(ctx, x + offset, margin, x + offset, height - margin);
+        }
+        for (let y = margin; y < height - margin; y += spacing * 1.16) {
+          const offset = (1 - currentState.advanced.alignment) * spacing * (rng() - 0.5);
+          line(ctx, margin, y + offset, width - margin, y + offset);
+        }
+
+        ctx.strokeStyle = `${palette.accent}${Math.round(140).toString(16)}`;
+        ctx.lineWidth = 1.5 + currentState.complexity * 2.2;
+        const frameW = width - margin * 2.3;
+        const frameH = height - margin * 2.8;
+        const frameX = margin * (0.95 + rng() * 0.18);
+        const frameY = margin * (0.9 + rng() * 0.14);
+        ctx.strokeRect(frameX, frameY, frameW, frameH);
+
+        const accentCount = 2 + Math.round(currentState.density * 4);
+        for (let i = 0; i < accentCount; i += 1) {
+          const rectW = width * (0.2 + rng() * 0.22);
+          const rectH = height * (0.11 + rng() * 0.17);
+          const x = margin + rng() * (width - margin * 2 - rectW);
+          const y = margin + rng() * (height - margin * 2 - rectH);
+          ctx.strokeRect(x, y, rectW, rectH);
+        }
+      }
+
+      function drawBlockGeometry(ctx, width, height, palette, currentState, rng) {
+        const count = Math.round(4 + currentState.advanced.blockCount * 9 + currentState.density * 4);
+        const inset = width * currentState.advanced.insetRatio;
+        const overlap = currentState.advanced.overlap;
+        const radiusBase = 20 + currentState.advanced.radiusBias * 80;
+
+        for (let i = 0; i < count; i += 1) {
+          const w = width * (0.18 + rng() * 0.34);
+          const h = height * (0.08 + rng() * 0.22);
+          const x = inset + rng() * (width - inset * 2 - w);
+          const y = inset + rng() * (height - inset * 2 - h);
+          const radius = radiusBase * (0.2 + rng() * 0.9);
+          ctx.fillStyle = i % 3 === 0 ? `${palette.accent}cc` : i % 3 === 1 ? `${palette.surface}b8` : `${palette.accentSoft}cc`;
+          roundedRect(ctx, x - overlap * 26 * rng(), y - overlap * 20 * rng(), w, h, radius);
+          ctx.fill();
+        }
+
+        ctx.lineWidth = 2 + currentState.complexity * 4;
+        ctx.strokeStyle = `${palette.ink}88`;
+        for (let i = 0; i < 3; i += 1) {
+          const radius = width * (0.18 + rng() * 0.22);
+          const cx = width * (0.24 + rng() * 0.52);
+          const cy = height * (0.18 + rng() * 0.6);
+          const sweep = Math.PI * (0.6 + currentState.advanced.arcSweep * 1.2);
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, rng() * Math.PI, rng() * Math.PI + sweep);
+          ctx.stroke();
+        }
+      }
+
+      function drawTechGeometry(ctx, width, height, palette, currentState, rng) {
+        const beamCount = Math.round(18 + currentState.advanced.beamDensity * 56 + currentState.density * 28);
+        const offsetX = width * currentState.advanced.focalOffset * 0.38;
+        const centerX = width * 0.5 + offsetX;
+        const centerY = height * 0.28;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.strokeStyle = `${palette.accent}${Math.round((0.12 + currentState.advanced.glow * 0.34) * 255).toString(16).padStart(2, "0")}`;
+        ctx.lineWidth = 0.8 + currentState.complexity * 1.7;
+        for (let i = 0; i < beamCount; i += 1) {
+          const angle = (Math.PI * 2 * i) / beamCount;
+          const inner = width * (0.02 + rng() * 0.05);
+          const outer = width * (0.16 + rng() * 0.45);
+          line(ctx, Math.cos(angle) * inner, Math.sin(angle) * inner, Math.cos(angle) * outer, Math.sin(angle) * outer);
+        }
+        ctx.restore();
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = `${palette.ink}50`;
+        for (let i = 0; i < 4; i += 1) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY + height * (0.12 * i), width * (0.12 + currentState.advanced.ringSpread * 0.24 + i * 0.03), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      function drawOrganicGeometry(ctx, width, height, palette, currentState, rng) {
+        const waveCount = Math.round(4 + currentState.advanced.waveCount * 7 + currentState.density * 6);
+        const amplitude = height * (0.03 + currentState.advanced.amplitude * 0.11 + currentState.density * 0.03);
+        const turbulence = currentState.advanced.turbulence * width * 0.08;
+        ctx.lineWidth = 1.6 + currentState.complexity * 2.4;
+
+        for (let i = 0; i < waveCount; i += 1) {
+          const baseline = height * (0.14 + (i / Math.max(1, waveCount - 1)) * 0.72);
+          ctx.strokeStyle = i % 2 === 0 ? `${palette.accent}8a` : `${palette.ink}50`;
+          ctx.beginPath();
+          for (let step = 0; step <= 10; step += 1) {
+            const t = step / 10;
+            const x = width * t;
+            const sine = Math.sin(t * Math.PI * (1.4 + currentState.advanced.drift * 4) + i * 0.55) * amplitude;
+            const noise = (rng() - 0.5) * turbulence;
+            const y = baseline + sine + noise;
+            if (step === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              const previousX = width * ((step - 1) / 10);
+              const controlX = previousX + (x - previousX) * currentState.advanced.smoothness;
+              ctx.quadraticCurveTo(controlX, y, x, y);
+            }
+          }
+          ctx.stroke();
+        }
+      }
+
+      function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        if (currentState.preset === "minimal-grid") {
+          ctx.fillStyle = `${palette.accent}28`;
+          const size = width * (0.08 + currentState.complexity * 0.1);
+          ctx.fillRect(width * 0.14, height * 0.18, size, size * 1.5);
+          ctx.fillRect(width * 0.72, height * 0.64, size * 1.1, size * 0.8);
+        }
+        if (currentState.preset === "bold-blocks") {
+          ctx.globalCompositeOperation = "multiply";
+          ctx.fillStyle = `${palette.ink}24`;
+          ctx.beginPath();
+          ctx.arc(width * 0.72, height * 0.24, width * 0.22, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = `${palette.accent}35`;
+          roundedRect(ctx, width * 0.08, height * 0.68, width * 0.52, height * 0.12, 40);
+          ctx.fill();
+        }
+        if (currentState.preset === "tech-texture") {
+          const gradient = ctx.createLinearGradient(width * 0.2, height * 0.72, width * 0.78, height * 0.16);
+          gradient.addColorStop(0, `${palette.accent}00`);
+          gradient.addColorStop(0.4, `${palette.accent}3d`);
+          gradient.addColorStop(1, `${palette.accent}00`);
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 10 + currentState.advanced.glow * 24;
+          ctx.beginPath();
+          ctx.moveTo(width * 0.14, height * 0.86);
+          ctx.lineTo(width * 0.82, height * 0.28);
+          ctx.stroke();
+        }
+        if (currentState.preset === "organic-flow") {
+          ctx.fillStyle = `${palette.accent}${Math.round((0.06 + currentState.advanced.veilOpacity * 0.26) * 255).toString(16).padStart(2, "0")}`;
+          for (let i = 0; i < 3; i += 1) {
+            const x = width * (0.12 + rng() * 0.6);
+            const y = height * (0.14 + rng() * 0.62);
+            const w = width * (0.16 + rng() * 0.24);
+            const h = height * (0.12 + rng() * 0.22);
+            ctx.beginPath();
+            ctx.ellipse(x, y, w, h, rng() * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawTextureLayer(ctx, width, height, palette, currentState, rng) {
+        const noiseIntensity = currentState.preset === "tech-texture"
+          ? currentState.advanced.grain
+          : currentState.preset === "minimal-grid"
+            ? currentState.advanced.noise
+            : 0.06 + currentState.complexity * 0.06 + currentState.density * 0.04;
+
+        if (noiseIntensity > 0.01) {
+          const dots = Math.round(width * height * (0.00025 + noiseIntensity * 0.0011));
+          ctx.fillStyle = `${palette.ink}10`;
+          for (let i = 0; i < dots; i += 1) {
+            const x = rng() * width;
+            const y = rng() * height;
+            const size = 0.3 + rng() * (1 + noiseIntensity * 1.4);
+            ctx.fillRect(x, y, size, size);
+          }
+        }
+
+        if (currentState.preset === "tech-texture") {
+          const step = 5 + currentState.advanced.scanlineStrength * 16;
+          ctx.strokeStyle = `${palette.ink}1a`;
+          ctx.lineWidth = 1;
+          for (let y = 0; y < height; y += step) {
+            line(ctx, 0, y, width, y);
+          }
+        }
+      }
+
+      function roundedRect(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      }
+
+      function renderArtwork(ctx, outputWidth, outputHeight, currentState) {
+        const palette = palettes[currentState.palette];
+        const rng = makeRng(currentState.seed);
+
+        ctx.clearRect(0, 0, outputWidth, outputHeight);
+        drawBackground(ctx, outputWidth, outputHeight, palette, currentState.preset, currentState, rng);
+
+        switch (currentState.preset) {
+          case "minimal-grid":
+            drawMinimalGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+            break;
+          case "bold-blocks":
+            drawBlockGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+            break;
+          case "tech-texture":
+            drawTechGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+            break;
+          case "organic-flow":
+            drawOrganicGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+            break;
+          default:
+            drawMinimalGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        }
+
+        drawAccentLayer(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawTextureLayer(ctx, outputWidth, outputHeight, palette, currentState, rng);
+      }
+
+      function computePreviewSurface() {
+        const stageRect = elements.previewStage.getBoundingClientRect();
+        const stageWidth = Math.max(stageRect.width - 52, 220);
+        const stageHeight = Math.max(stageRect.height - 52, 320);
+        const ratio = state.width / state.height;
+        let displayWidth = stageWidth;
+        let displayHeight = displayWidth / ratio;
+
+        if (displayHeight > stageHeight) {
+          displayHeight = stageHeight;
+          displayWidth = displayHeight * ratio;
+        }
+
+        const dpr = Math.max(window.devicePixelRatio || 1, 1);
+        return {
+          cssWidth: Math.round(displayWidth),
+          cssHeight: Math.round(displayHeight),
+          pixelWidth: Math.max(1, Math.round(displayWidth * dpr)),
+          pixelHeight: Math.max(1, Math.round(displayHeight * dpr)),
+        };
+      }
+
+      function renderPreview() {
+        const surface = computePreviewSurface();
+        elements.canvas.width = surface.pixelWidth;
+        elements.canvas.height = surface.pixelHeight;
+        elements.canvas.style.width = `${surface.cssWidth}px`;
+        elements.canvas.style.height = `${surface.cssHeight}px`;
+        const ctx = elements.canvas.getContext("2d", { alpha: false });
+        renderArtwork(ctx, surface.pixelWidth, surface.pixelHeight, state);
+      }
+
+      function queueRender() {
+        if (renderToken) {
+          return;
+        }
+        renderToken = window.requestAnimationFrame(() => {
+          renderToken = 0;
+          syncControlValues();
+          renderPreview();
+        });
+      }
+
+      function bindCommonControls() {
+        elements.sizePreset.addEventListener("change", (event) => {
+          applySizePreset(event.currentTarget.value);
+        });
+
+        elements.paletteSelect.addEventListener("change", (event) => {
+          state.palette = event.currentTarget.value;
+          queueRender();
+        });
+
+        elements.densityInput.addEventListener("input", (event) => {
+          state.density = Number(event.currentTarget.value);
+          queueRender();
+        });
+
+        elements.complexityInput.addEventListener("input", (event) => {
+          state.complexity = Number(event.currentTarget.value);
+          queueRender();
+        });
+
+        elements.seedInput.addEventListener("change", (event) => {
+          const value = normalizeSeed(event.currentTarget.value);
+          state.seed = value;
+          event.currentTarget.value = String(value);
+          queueRender();
+        });
+
+        ["width", "height"].forEach((fieldName) => {
+          const input = fieldName === "width" ? elements.widthInput : elements.heightInput;
+          input.addEventListener("change", () => {
+            if (validateDimensionInput(fieldName)) {
+              queueRender();
+            }
+          });
+        });
+
+        elements.regenerateButton.addEventListener("click", () => {
+          state.seed = nextSeed();
+          syncControlValues();
+          queueRender();
+        });
+
+        elements.randomizeButton.addEventListener("click", () => {
+          randomizeCurrentPreset();
+          setFeedback("已生成一组新的参数组合", "success");
+        });
+
+        elements.resetButton.addEventListener("click", () => {
+          resetCurrentPreset();
+        });
+
+        elements.exportButton.addEventListener("click", async () => {
+          await exportPng();
+        });
+
+        window.addEventListener("resize", queueRender);
+      }
+
+      async function exportPng() {
+        try {
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = state.width;
+          exportCanvas.height = state.height;
+          const exportContext = exportCanvas.getContext("2d", { alpha: false });
+          renderArtwork(exportContext, state.width, state.height, state);
+          const blob = await new Promise((resolve) => exportCanvas.toBlob(resolve, "image/png"));
+          if (!blob) {
+            throw new Error("浏览器没有返回有效图像数据");
+          }
+          const fileName = `wallpaper-${state.preset}-${state.width}x${state.height}-${state.seed}.png`;
+          const href = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = href;
+          anchor.download = fileName;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+          setFeedback(`已开始导出 ${fileName}`, "success", 2800);
+          return fileName;
+        } catch (error) {
+          setFeedback(`导出失败：${error.message}`, "error", 3200);
+          throw error;
+        }
+      }
+
+      function initialize() {
+        buildPresetButtons();
+        buildSelectOptions();
+        bindCommonControls();
+        syncPresetSelection();
+        updateDerivedSizePreset();
+        syncControlValues();
+        renderAdvancedControls();
+        renderPreview();
+      }
+
+      function getCanvasSignature() {
+        const sampleWidth = Math.min(64, elements.canvas.width);
+        const sampleHeight = Math.min(64, elements.canvas.height);
+        const sampleCanvas = document.createElement("canvas");
+        sampleCanvas.width = sampleWidth;
+        sampleCanvas.height = sampleHeight;
+        const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+        sampleContext.drawImage(elements.canvas, 0, 0, sampleWidth, sampleHeight);
+        const pixels = sampleContext.getImageData(0, 0, sampleWidth, sampleHeight).data;
+        let total = 0;
+        for (let index = 0; index < pixels.length; index += 16) {
+          total += pixels[index] + pixels[index + 1] + pixels[index + 2];
+        }
+        return total;
+      }
+
+      window.__app = {
+        getState: () => JSON.parse(JSON.stringify(state)),
+        switchPreset,
+        randomizeCurrentPreset,
+        resetCurrentPreset,
+        exportPng,
+        getCanvasSignature,
+        renderPreview,
+      };
+
+      initialize();
+    </script>
+  </body>
+</html>
