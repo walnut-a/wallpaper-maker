@@ -1129,14 +1129,15 @@
 
       function drawHexPattern(ctx, width, height, side, color, alpha) {
         const hexHeight = Math.sqrt(3) * side;
+        const columnStep = side * 1.5;
         ctx.save();
         ctx.strokeStyle = hexToRgba(color, alpha);
         ctx.lineWidth = 1;
-        for (let row = -1; row < Math.ceil(height / hexHeight) + 1; row += 1) {
-          for (let column = -1; column < Math.ceil(width / (side * 1.5)) + 1; column += 1) {
-            const offsetX = row % 2 === 0 ? 0 : side * 0.75;
-            const centerX = column * side * 1.5 + offsetX;
-            const centerY = row * hexHeight * 0.5;
+        for (let column = -2; column < Math.ceil(width / columnStep) + 2; column += 1) {
+          const centerX = column * columnStep;
+          const offsetY = column % 2 === 0 ? 0 : hexHeight * 0.5;
+          for (let row = -2; row < Math.ceil(height / hexHeight) + 2; row += 1) {
+            const centerY = row * hexHeight + offsetY;
             ctx.beginPath();
             for (let point = 0; point < 6; point += 1) {
               const angle = (Math.PI / 180) * (60 * point - 30);
@@ -1347,8 +1348,6 @@
         }
         ctx.drawImage(layer.canvas, 0, 0);
 
-        const side = width * (0.012 + currentState.advanced.cellScale * 0.02);
-        drawHexPattern(ctx, width, height, side, palette.ink, 0.12 + currentState.advanced.patternStrength * 0.22);
         addVignette(ctx, width, height, palette.ink, 0.22 + currentState.advanced.vignette * 0.36);
       }
 
@@ -1474,6 +1473,9 @@
           for (let y = 0; y < height; y += step) {
             line(ctx, 0, y, width, y);
           }
+          const side = width * (0.012 + currentState.advanced.cellScale * 0.02);
+          drawHexPattern(ctx, width, height, side, palette.accentSoft, 0.04 + currentState.advanced.patternStrength * 0.07);
+          drawHexPattern(ctx, width, height, side, palette.ink, 0.1 + currentState.advanced.patternStrength * 0.16);
         }
       }
 
