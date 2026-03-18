@@ -9,16 +9,6 @@ GitHub Pages：
 
 [https://walnut-a.github.io/wallpaper-maker/](https://walnut-a.github.io/wallpaper-maker/)
 
-## 🖼️ 界面预览
-
-### 桌面端
-
-![桌面端预览](docs/assets/readme/wallpaper-maker-desktop.png)
-
-### 移动端
-
-![移动端预览](docs/assets/readme/wallpaper-maker-mobile.png)
-
 ## ✨ 它能做什么
 
 - 🎨 **四种风格预设** - 极简秩序感、大色块构成、科技纹理感、有机生成感
