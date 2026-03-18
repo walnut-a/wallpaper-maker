@@ -9,6 +9,16 @@
 
 [https://walnut-a.github.io/wallpaper-maker/](https://walnut-a.github.io/wallpaper-maker/)
 
+## 界面预览
+
+### 桌面端
+
+![桌面端预览](docs/assets/readme/wallpaper-maker-desktop.png)
+
+### 移动端
+
+![移动端预览](docs/assets/readme/wallpaper-maker-mobile.png)
+
 ## 特性
 
 - 单文件应用：全部逻辑都在 `index.html`，没有构建步骤，没有后端依赖
@@ -35,6 +45,13 @@
 - 亚麻石灰
 - 暮海灰蓝
 - 矿物砂红
+
+## 适合拿来做什么
+
+- 给自己做一张不会太吵、但也不单薄的手机壁纸
+- 快速试几套冷暖关系、密度和气氛差异
+- 固定一组种子和尺寸，批量生成一套统一风格的壁纸
+- 当作一个轻量的静态生成工具，而不是打开大型设计软件
 
 ## 可调内容
 
