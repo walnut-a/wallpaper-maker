@@ -120,23 +120,8 @@
         gap: 0.45rem;
       }
 
-      .eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        width: fit-content;
-        padding: 0.32rem 0.66rem;
-        border: 1px solid rgba(77, 64, 53, 0.12);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.4);
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--text-main);
-        font-size: 0.68rem;
-      }
-
       .hero-mark {
-        margin: 0.2rem 0 0;
+        margin: 0;
         color: var(--text-strong);
         font-size: clamp(2.55rem, 4vw, 4.25rem);
         line-height: 0.92;
@@ -152,22 +137,6 @@
         font-weight: 400;
         line-height: 1.72;
         letter-spacing: 0;
-      }
-
-      .panel-intro {
-        margin: 0;
-        max-width: 28ch;
-        color: var(--text-soft);
-        line-height: 1.6;
-        font-size: 0.83rem;
-      }
-
-      .hero-caption {
-        margin: 0.35rem 0 0;
-        color: var(--text-soft);
-        font-size: 0.76rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
       }
 
       .feedback {
@@ -245,12 +214,6 @@
         color: var(--text-strong);
         font-size: 0.96rem;
         font-weight: 600;
-      }
-
-      .preset-note {
-        color: var(--text-muted);
-        font-size: 0.82rem;
-        line-height: 1.45;
       }
 
       .field-grid {
@@ -483,18 +446,10 @@
       }
 
       .panel-foot {
-        display: grid;
-        gap: 0.5rem;
+        display: flex;
         margin-top: auto;
         padding-top: 1rem;
         border-top: 1px solid rgba(77, 64, 53, 0.1);
-      }
-
-      .panel-foot-copy {
-        margin: 0;
-        color: var(--text-muted);
-        font-size: 0.76rem;
-        line-height: 1.7;
       }
 
       .project-link {
@@ -502,6 +457,7 @@
         align-items: center;
         gap: 0.45rem;
         width: fit-content;
+        margin-top: auto;
         color: var(--text-soft);
         font-size: 0.78rem;
         text-decoration: none;
@@ -523,10 +479,6 @@
 
         .hero-mark {
           font-size: clamp(2.3rem, 4vw, 3.4rem);
-        }
-
-        .panel-intro {
-          max-width: 24ch;
         }
 
         .preview-panel {
@@ -561,10 +513,6 @@
           padding: 0.8rem;
         }
 
-        .panel-intro {
-          max-width: 34ch;
-        }
-
         .hero-mark {
           font-size: clamp(2.3rem, 9vw, 3.4rem);
         }
@@ -595,10 +543,6 @@
           border-radius: 18px;
         }
 
-        .panel-foot {
-          gap: 0.35rem;
-        }
-
         .preview-panel {
           min-height: 60svh;
         }
@@ -617,13 +561,8 @@
     <main class="app-shell">
       <aside class="control-panel">
         <header class="panel-head">
-          <span class="eyebrow">Wallpaper Maker</span>
           <p class="hero-mark">Wallpaper Maker</p>
           <h1>给自己做一张不吵、但也不单薄的手机壁纸。</h1>
-          <p class="panel-intro">
-            打开就有结果，先看图，再慢慢调参数。左边是控制，右边是成品预览。
-          </p>
-          <p class="hero-caption">Pure front-end · Single file · Static deploy</p>
           <div id="feedback" class="feedback" aria-live="polite"></div>
         </header>
 
@@ -697,7 +636,6 @@
         </section>
 
         <div class="panel-foot">
-          <p class="panel-foot-copy">当前项目已公开在 GitHub，页面本身也可以直接通过 GitHub Pages 打开。</p>
           <a
             class="project-link"
             href="https://github.com/walnut-a/wallpaper-maker"
@@ -1024,10 +962,7 @@
           button.type = "button";
           button.className = "preset-option";
           button.dataset.preset = key;
-          button.innerHTML = `
-            <span class="preset-name">${config.label}</span>
-            <span class="preset-note">${config.note}</span>
-          `;
+          button.innerHTML = `<span class="preset-name">${config.label}</span>`;
           button.addEventListener("click", () => switchPreset(key));
           elements.presetGrid.appendChild(button);
         });
