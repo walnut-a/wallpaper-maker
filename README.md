@@ -2,6 +2,10 @@
 
 一个单文件、纯前端的参数化手机壁纸生成工具。
 
+## 在线体验
+
+[https://walnut-a.github.io/wallpaper-maker/](https://walnut-a.github.io/wallpaper-maker/)
+
 ## 特点
 
 - 打开页面就能直接看到一张成品壁纸
@@ -37,3 +41,7 @@ http://127.0.0.1:8123
 ## 部署到 GitHub Pages
 
 这个项目是静态页面，不需要构建步骤。把仓库发布到 GitHub Pages 后，直接访问生成的页面地址即可。
+
+当前公开地址：
+
+[https://walnut-a.github.io/wallpaper-maker/](https://walnut-a.github.io/wallpaper-maker/)
