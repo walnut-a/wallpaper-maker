@@ -512,11 +512,37 @@
         color: var(--text-strong);
       }
 
-      @media (max-width: 960px) {
+      @media (max-width: 1120px) {
+        .app-shell {
+          grid-template-columns: minmax(19rem, 22rem) minmax(0, 1fr);
+        }
+
+        .control-panel {
+          padding: 1.35rem;
+        }
+
+        .hero-mark {
+          font-size: clamp(2.3rem, 4vw, 3.4rem);
+        }
+
+        .panel-intro {
+          max-width: 24ch;
+        }
+
+        .preview-panel {
+          padding: 0.9rem;
+        }
+
+        .preview-stage {
+          padding: 0.9rem;
+        }
+      }
+
+      @media (max-width: 760px) {
         .app-shell {
           height: auto;
           grid-template-columns: 1fr;
-          grid-template-rows: minmax(42vh, 48vh) auto;
+          grid-template-rows: minmax(32rem, 62svh) auto;
         }
 
         .control-panel {
@@ -531,8 +557,8 @@
         .preview-panel {
           order: 1;
           height: auto;
-          min-height: 50vh;
-          padding: 0.9rem;
+          min-height: 58svh;
+          padding: 0.8rem;
         }
 
         .panel-intro {
@@ -541,6 +567,14 @@
 
         .hero-mark {
           font-size: clamp(2.3rem, 9vw, 3.4rem);
+        }
+
+        .preview-stage {
+          padding: 0.75rem;
+        }
+
+        .preview-stage::before {
+          inset: 0.75rem;
         }
       }
 
@@ -563,6 +597,18 @@
 
         .panel-foot {
           gap: 0.35rem;
+        }
+
+        .preview-panel {
+          min-height: 60svh;
+        }
+
+        .preview-stage {
+          padding: 0.7rem;
+        }
+
+        .preview-stage::before {
+          inset: 0.7rem;
         }
       }
     </style>
