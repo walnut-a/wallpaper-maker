@@ -260,6 +260,15 @@
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
       }
 
+      .field select {
+        appearance: none;
+        padding-right: 3rem;
+        background-image: url("data:image/svg+xml,%3Csvg width='14' height='10' viewBox='0 0 14 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 2.25L7 7.25L12 2.25' stroke='%2363564B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 14px 10px;
+      }
+
       .field input[type="range"] {
         width: 100%;
         accent-color: var(--accent);
@@ -666,6 +675,7 @@
         { value: "android-tall", label: "Android 高屏", width: 1440, height: 3200 },
         { value: "classic-9-16", label: "传统 9:16", width: 1080, height: 1920 },
       ];
+      const defaultSizePreset = sizePresets.find((item) => item.value === "classic-9-16") ?? sizePresets[0];
 
       const palettes = {
         dawn: {
@@ -887,9 +897,9 @@
         const preset = presetDefinitions[presetKey];
         return {
           preset: presetKey,
-          sizePreset: sizePresets[0].value,
-          width: sizePresets[0].width,
-          height: sizePresets[0].height,
+          sizePreset: defaultSizePreset.value,
+          width: defaultSizePreset.width,
+          height: defaultSizePreset.height,
           seed: 314159,
           palette: preset.defaults.palette,
           density: preset.defaults.density,
