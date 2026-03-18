@@ -58,6 +58,7 @@
 
       .app-shell {
         display: grid;
+        height: 100vh;
         min-height: 100vh;
         grid-template-columns: minmax(18rem, var(--panel-width)) minmax(0, 1fr);
       }
@@ -71,6 +72,8 @@
         background: var(--panel-bg);
         border-right: 1px solid var(--panel-border);
         box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.3);
+        height: 100vh;
+        overflow: auto;
         z-index: 1;
       }
 
@@ -330,6 +333,8 @@
       .preview-panel {
         display: grid;
         place-items: stretch;
+        height: 100vh;
+        min-height: 100vh;
         padding: clamp(1rem, 2vw, 1.6rem);
       }
 
@@ -337,6 +342,7 @@
         position: relative;
         display: grid;
         place-items: center;
+        height: 100%;
         min-height: 0;
         padding: clamp(1rem, 2vw, 2rem);
         border-radius: var(--radius-xl);
@@ -390,6 +396,7 @@
 
       @media (max-width: 960px) {
         .app-shell {
+          height: auto;
           grid-template-columns: 1fr;
           grid-template-rows: minmax(42vh, 48vh) auto;
         }
@@ -398,11 +405,14 @@
           order: 2;
           border-right: 0;
           border-top: 1px solid var(--panel-border);
+          height: auto;
+          overflow: visible;
           padding: 1.15rem 1rem 1.4rem;
         }
 
         .preview-panel {
           order: 1;
+          height: auto;
           min-height: 50vh;
           padding: 0.9rem;
         }
