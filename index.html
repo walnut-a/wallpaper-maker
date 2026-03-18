@@ -1612,11 +1612,32 @@
           resetCurrentPreset();
         });
 
-        elements.exportButton.addEventListener("click", async () => {
-          await exportPng();
+        elements.exportButton.addEventListener("click", () => {
+          void exportPng();
         });
 
         window.addEventListener("resize", queueRender);
+      }
+
+      function getExportStrategy(protocol = window.location.protocol, userAgent = window.navigator.userAgent) {
+        const normalizedProtocol = String(protocol || "").toLowerCase();
+        const normalizedAgent = String(userAgent || "").toLowerCase();
+        const isFileProtocol = normalizedProtocol === "file:";
+        const isSafari = normalizedAgent.includes("safari")
+          && !normalizedAgent.includes("chrome")
+          && !normalizedAgent.includes("chromium")
+          && !normalizedAgent.includes("android");
+        return isFileProtocol || isSafari ? "data-url" : "blob";
+      }
+
+      function triggerAnchorDownload(href, fileName) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.download = fileName;
+        anchor.rel = "noopener";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
       }
 
       async function exportPng() {
@@ -1626,19 +1647,27 @@
           exportCanvas.height = state.height;
           const exportContext = exportCanvas.getContext("2d", { alpha: false });
           renderArtwork(exportContext, state.width, state.height, state);
+          const fileName = `wallpaper-${state.preset}-${state.width}x${state.height}-${state.seed}.png`;
+          const strategy = getExportStrategy();
+
+          if (strategy === "data-url") {
+            const href = exportCanvas.toDataURL("image/png");
+            triggerAnchorDownload(href, fileName);
+            setFeedback(`已开始导出 ${fileName}`, "success", 2800);
+            return fileName;
+          }
+
           const blob = await new Promise((resolve) => exportCanvas.toBlob(resolve, "image/png"));
           if (!blob) {
-            throw new Error("浏览器没有返回有效图像数据");
+            const href = exportCanvas.toDataURL("image/png");
+            triggerAnchorDownload(href, fileName);
+            setFeedback(`已开始导出 ${fileName}`, "success", 2800);
+            return fileName;
           }
-          const fileName = `wallpaper-${state.preset}-${state.width}x${state.height}-${state.seed}.png`;
+
           const href = URL.createObjectURL(blob);
-          const anchor = document.createElement("a");
-          anchor.href = href;
-          anchor.download = fileName;
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-          window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+          triggerAnchorDownload(href, fileName);
+          window.setTimeout(() => URL.revokeObjectURL(href), 60000);
           setFeedback(`已开始导出 ${fileName}`, "success", 2800);
           return fileName;
         } catch (error) {
@@ -1680,6 +1709,7 @@
         randomizeCurrentPreset,
         resetCurrentPreset,
         exportPng,
+        getExportStrategy,
         getCanvasSignature,
         renderPreview,
       };
