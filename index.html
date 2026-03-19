@@ -890,19 +890,21 @@
         "reeded-column": {
           label: "长虹玻璃柱面",
           defaults: {
-            columnCount: 0.22,
-            columnWidth: 0.56,
             ridgeDensity: 0.42,
-            refractionOffset: 0.48,
+            ridgeBreath: 0.36,
+            refractionField: 0.48,
+            focusField: 0.54,
+            fieldBlend: 0.5,
           },
           groups: [
             {
               title: "主体控制",
               controls: [
-                { key: "columnCount", label: "柱面数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
-                { key: "columnWidth", label: "柱体宽度", min: 0.16, max: 0.92, step: 0.01, format: "percent" },
                 { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
-                { key: "refractionOffset", label: "折射幅度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+                { key: "ridgeBreath", label: "棱线呼吸", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "refractionField", label: "全局折射", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+                { key: "focusField", label: "局部增强", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "fieldBlend", label: "雾场融合", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -928,19 +930,21 @@
         "mirror-slices": {
           label: "镜面切片",
           defaults: {
-            sliceCount: 0.36,
-            sliceAngle: 0.56,
-            sliceVariance: 0.44,
-            sliceSharpness: 0.62,
+            sliceCount: 0.34,
+            sliceDirection: 0.56,
+            sliceVariance: 0.52,
+            sliceMelt: 0.48,
+            sliceReveal: 0.58,
           },
           groups: [
             {
               title: "主体控制",
               controls: [
-                { key: "sliceCount", label: "切片数量", min: 0.08, max: 0.78, step: 0.01, format: "percent" },
-                { key: "sliceAngle", label: "切片倾角", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
-                { key: "sliceVariance", label: "厚薄反差", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
-                { key: "sliceSharpness", label: "边缘清晰度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "sliceCount", label: "切面数量", min: 0.08, max: 0.78, step: 0.01, format: "percent" },
+                { key: "sliceDirection", label: "倾角族谱", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "sliceVariance", label: "面宽级差", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "sliceMelt", label: "边界融化", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "sliceReveal", label: "高光显影", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1103,10 +1107,11 @@
             complexity: 0.66,
             advanced: {
               softness: 0.5,
-              columnCount: 0.22,
-              columnWidth: 0.56,
               ridgeDensity: 0.42,
-              refractionOffset: 0.48,
+              ridgeBreath: 0.36,
+              refractionField: 0.48,
+              focusField: 0.54,
+              fieldBlend: 0.5,
               glowRadius: 0.62,
               tonalSplit: 0.58,
               prismStrength: 0.24,
@@ -1819,6 +1824,12 @@
         });
       }
 
+      function gaussianInfluence(position, center, radius) {
+        const safeRadius = Math.max(1, radius);
+        const delta = (position - center) / safeRadius;
+        return Math.exp(-(delta * delta));
+      }
+
       function drawGridPattern(ctx, width, height, spacing, color, alpha) {
         ctx.save();
         ctx.strokeStyle = hexToRgba(color, alpha);
@@ -2253,82 +2264,64 @@
         addVignette(ctx, width, height, palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.08);
       }
 
-      function buildReededColumnComposition(width, height, currentState, rng) {
-        const requestedCount = currentState.advanced.columnCount ?? 0.22;
-        const columnCount = 1 + Math.round(requestedCount * 1.2);
-        const leadWidth = width * (0.18 + (currentState.advanced.columnWidth ?? 0.56) * 0.22);
-        const leadHeight = height * (0.58 + currentState.complexity * 0.16);
-        const leadX = width * (0.52 + (rng() - 0.5) * 0.05) - leadWidth * 0.5;
-        const leadY = height * (0.08 + (1 - currentState.density) * 0.06);
-        const columns = [
-          {
-            x: leadX,
-            y: leadY,
-            width: leadWidth,
-            height: leadHeight,
-            radius: leadWidth * 0.5,
-            ridgePhase: rng() * Math.PI * 2,
-            alpha: 1,
-          },
-        ];
+      function buildReededFieldComposition(width, height, currentState, rng) {
+        const focusStrength = currentState.advanced.focusField ?? 0.54;
+        const zoneCount = 1 + Math.round(focusStrength * 1.2);
+        const focusZones = [];
 
-        if (columnCount > 1) {
-          const secondaryWidth = leadWidth * (0.58 + rng() * 0.16);
-          const direction = rng() > 0.52 ? 1 : -1;
-          columns.unshift({
-            x: leadX + direction * leadWidth * (0.46 + rng() * 0.16) - secondaryWidth * 0.5,
-            y: leadY + height * (0.1 + rng() * 0.06),
-            width: secondaryWidth,
-            height: leadHeight * (0.76 + rng() * 0.08),
-            radius: secondaryWidth * 0.5,
-            ridgePhase: rng() * Math.PI * 2,
-            alpha: 0.74,
+        for (let index = 0; index < zoneCount; index += 1) {
+          focusZones.push({
+            x: width * (0.22 + rng() * 0.56),
+            width: width * (0.16 + focusStrength * 0.22 + rng() * 0.1),
+            intensity: 0.24 + focusStrength * 0.42 + rng() * 0.16,
+            drift: (rng() - 0.5) * width * (0.02 + (currentState.advanced.refractionField ?? 0.48) * 0.05),
+            bias: rng() * Math.PI * 2,
           });
         }
 
-        return { columns };
+        return {
+          basePhase: rng() * Math.PI * 2,
+          refractionPhase: rng() * Math.PI * 2,
+          focusZones,
+        };
       }
 
-      function drawReededColumnCore(ctx, width, height, palette, currentState, composition) {
+      function drawReededFieldBase(ctx, width, height, palette, currentState, composition) {
         const layer = createLayer(width, height);
-        const softness = currentState.advanced.softness ?? 0.5;
-        const glow = currentState.advanced.glowRadius ?? 0.62;
+        const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
+        const ridgeBreath = currentState.advanced.ridgeBreath ?? 0.36;
+        const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
+        const step = width * (0.014 + (1 - ridgeDensity) * 0.028);
 
-        composition.columns.forEach((column, index) => {
-          paintSoftRoundedRect(layer.ctx, {
-            x: column.x - width * 0.012,
-            y: column.y + height * 0.018,
-            width: column.width * 1.02,
-            height: column.height,
-            radius: column.radius,
-            color: hexToRgba(palette.ink, 0.12 + (1 - index * 0.18) * 0.1),
-            blur: width * (0.018 + softness * 0.05),
-            alpha: column.alpha,
-            composite: "multiply",
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "soft-light";
+        for (let x = -step; x < width + step * 2; x += step) {
+          const normalized = x / Math.max(step, 1);
+          const localWidth = step * (0.78 + Math.sin(composition.basePhase + normalized * (0.48 + ridgeBreath * 0.5)) * ridgeBreath * 0.34);
+          let localIntensity = 0.05 + ridgeDensity * 0.05;
+          composition.focusZones.forEach((zone) => {
+            localIntensity += gaussianInfluence(x, zone.x, zone.width * 0.9) * zone.intensity * 0.08;
           });
+          const gradient = layer.ctx.createLinearGradient(x, 0, x + localWidth, 0);
+          gradient.addColorStop(0, hexToRgba(palette.ink, 0.08 + localIntensity));
+          gradient.addColorStop(0.22, hexToRgba(palette.surface, 0.03 + localIntensity * 0.3));
+          gradient.addColorStop(0.48, `rgba(255, 255, 255, ${0.04 + localIntensity * 0.65})`);
+          gradient.addColorStop(0.72, hexToRgba(palette.accentSoft, 0.04 + localIntensity * 0.35));
+          gradient.addColorStop(1, hexToRgba(palette.ink, 0.06 + localIntensity * 0.45));
+          layer.ctx.fillStyle = gradient;
+          layer.ctx.fillRect(x, 0, localWidth, height);
+        }
+        layer.ctx.restore();
 
-          layer.ctx.save();
-          roundedRect(layer.ctx, column.x, column.y, column.width, column.height, column.radius);
-          const bodyGradient = layer.ctx.createLinearGradient(column.x, column.y, column.x + column.width, column.y);
-          bodyGradient.addColorStop(0, hexToRgba(palette.ink, 0.22 + currentState.advanced.tonalSplit * 0.12));
-          bodyGradient.addColorStop(0.22, hexToRgba(palette.accentSoft, 0.14));
-          bodyGradient.addColorStop(0.48, `rgba(255, 255, 255, ${0.16 + glow * 0.18})`);
-          bodyGradient.addColorStop(0.72, hexToRgba(palette.surface, 0.26 + glow * 0.1));
-          bodyGradient.addColorStop(1, hexToRgba(palette.ink, 0.26 + currentState.advanced.tonalSplit * 0.16));
-          layer.ctx.fillStyle = bodyGradient;
-          layer.ctx.globalAlpha = column.alpha;
-          layer.ctx.fill();
-          layer.ctx.restore();
-
-          paintSoftRoundedRect(layer.ctx, {
-            x: column.x + column.width * 0.2,
-            y: column.y + column.height * 0.04,
-            width: column.width * 0.26,
-            height: column.height * 0.84,
-            radius: column.radius * 0.42,
-            color: `rgba(255, 255, 255, ${0.06 + glow * 0.08})`,
-            blur: width * 0.02,
-            alpha: column.alpha,
+        composition.focusZones.forEach((zone, index) => {
+          paintSoftEllipse(layer.ctx, {
+            x: zone.x + zone.drift * 0.16,
+            y: height * (0.18 + index * 0.22),
+            rx: zone.width * (0.58 + fieldBlend * 0.36),
+            ry: height * (0.22 + fieldBlend * 0.08),
+            rotation: zone.drift / Math.max(width, 1),
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.08 + fieldBlend * 0.08),
+            blur: width * (0.04 + fieldBlend * 0.05),
             composite: "screen",
           });
         });
@@ -2336,94 +2329,88 @@
         ctx.drawImage(layer.canvas, 0, 0);
       }
 
-      function drawReededColumnInternalRidges(ctx, width, height, palette, currentState, composition) {
-        const ridgeLayer = createLayer(width, height);
+      function drawReededFieldRefraction(ctx, width, height, palette, currentState, composition) {
+        const layer = createLayer(width, height);
+        const refractionField = currentState.advanced.refractionField ?? 0.48;
+        const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
         const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
+        const step = width * (0.018 + (1 - ridgeDensity) * 0.032);
 
-        composition.columns.forEach((column) => {
-          ridgeLayer.ctx.save();
-          roundedRect(ridgeLayer.ctx, column.x, column.y, column.width, column.height, column.radius);
-          ridgeLayer.ctx.clip();
-          ridgeLayer.ctx.globalAlpha = column.alpha;
-          ridgeLayer.ctx.globalCompositeOperation = "soft-light";
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "screen";
+        for (let x = -step; x < width + step * 2; x += step) {
+          let intensity = 0.02 + refractionField * 0.05;
+          let drift = Math.sin(composition.refractionPhase + x / Math.max(step, 1) * 0.42) * width * 0.004;
+          composition.focusZones.forEach((zone) => {
+            const influence = gaussianInfluence(x, zone.x, zone.width * 0.72);
+            intensity += influence * zone.intensity * 0.08;
+            drift += influence * zone.drift * 0.18;
+          });
+          const bandGradient = layer.ctx.createLinearGradient(x + drift, 0, x + drift + step * 0.86, 0);
+          bandGradient.addColorStop(0, hexToRgba(palette.accent, 0));
+          bandGradient.addColorStop(0.3, hexToRgba(palette.surface, 0.03 + intensity));
+          bandGradient.addColorStop(0.55, `rgba(255, 255, 255, ${0.02 + intensity * (0.85 + fieldBlend * 0.3)})`);
+          bandGradient.addColorStop(0.82, hexToRgba(palette.accentSoft, 0.02 + intensity * 0.6));
+          bandGradient.addColorStop(1, hexToRgba(palette.accent, 0));
+          layer.ctx.fillStyle = bandGradient;
+          layer.ctx.fillRect(x + drift, 0, step * 0.86, height);
+        }
+        layer.ctx.restore();
 
-          const bandStep = column.width * (0.042 + (1 - ridgeDensity) * 0.09);
-          for (let bandIndex = -2; bandIndex < Math.ceil(column.width / bandStep) + 3; bandIndex += 1) {
-            const ridgeX = column.x + bandIndex * bandStep;
-            const localWidth = bandStep * (0.82 + Math.sin(column.ridgePhase + bandIndex * 0.68) * 0.16);
-            const ridgeGradient = ridgeLayer.ctx.createLinearGradient(ridgeX, 0, ridgeX + localWidth, 0);
-            ridgeGradient.addColorStop(0, hexToRgba(palette.ink, 0.1 + ridgeDensity * 0.08));
-            ridgeGradient.addColorStop(0.18, hexToRgba(palette.surface, 0.04 + ridgeDensity * 0.05));
-            ridgeGradient.addColorStop(0.48, `rgba(255, 255, 255, ${0.05 + ridgeDensity * 0.16})`);
-            ridgeGradient.addColorStop(0.78, hexToRgba(palette.accentSoft, 0.05 + ridgeDensity * 0.07));
-            ridgeGradient.addColorStop(1, hexToRgba(palette.ink, 0.08 + ridgeDensity * 0.06));
-            ridgeLayer.ctx.fillStyle = ridgeGradient;
-            ridgeLayer.ctx.fillRect(ridgeX, column.y, localWidth, column.height);
-          }
-
-          ridgeLayer.ctx.restore();
+        composition.focusZones.forEach((zone) => {
+          paintSoftEllipse(layer.ctx, {
+            x: zone.x + zone.drift,
+            y: height * 0.54,
+            rx: zone.width * (0.56 + refractionField * 0.28),
+            ry: height * (0.34 + fieldBlend * 0.1),
+            rotation: zone.drift / Math.max(width, 1),
+            color: hexToRgba(palette.accent, 0.05 + zone.intensity * 0.08),
+            blur: width * (0.05 + refractionField * 0.04),
+            composite: "screen",
+          });
         });
 
-        ctx.drawImage(ridgeLayer.canvas, 0, 0);
+        ctx.drawImage(layer.canvas, 0, 0);
       }
 
-      function drawReededColumnRefraction(ctx, width, height, palette, currentState, composition) {
-        const refractionLayer = createLayer(width, height);
-        const refractionOffset = currentState.advanced.refractionOffset ?? 0.48;
-        const blur = width * (0.026 + (currentState.advanced.bandSoftness ?? 0.56) * 0.05);
+      function drawReededFieldFocus(ctx, width, height, palette, currentState, composition) {
+        const layer = createLayer(width, height);
+        const focusStrength = currentState.advanced.focusField ?? 0.54;
+        const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
 
-        composition.columns.forEach((column, index) => {
-          refractionLayer.ctx.save();
-          roundedRect(refractionLayer.ctx, column.x, column.y, column.width, column.height, column.radius);
-          refractionLayer.ctx.clip();
-          refractionLayer.ctx.globalAlpha = column.alpha;
-
-          const shift = width * (0.008 + refractionOffset * 0.018) * (index === 0 ? 1 : -0.72);
-          paintSoftEllipse(refractionLayer.ctx, {
-            x: column.x + column.width * 0.36 + shift,
-            y: column.y + column.height * 0.26,
-            rx: column.width * (0.46 + refractionOffset * 0.2),
-            ry: column.height * 0.18,
-            rotation: -0.16,
-            color: hexToRgba(palette.accent, 0.16 + refractionOffset * 0.1),
-            blur,
-            alpha: column.alpha,
+        composition.focusZones.forEach((zone, index) => {
+          const coreWidth = zone.width * (0.52 + focusStrength * 0.34);
+          paintSoftRoundedRect(layer.ctx, {
+            x: zone.x - coreWidth * 0.5,
+            y: height * (0.04 + index * 0.04),
+            width: coreWidth,
+            height: height * 0.92,
+            radius: coreWidth * 0.44,
+            color: `rgba(255, 255, 255, ${0.02 + zone.intensity * 0.08})`,
+            blur: width * (0.035 + fieldBlend * 0.045),
             composite: "screen",
           });
-          paintSoftEllipse(refractionLayer.ctx, {
-            x: column.x + column.width * 0.62 - shift * 0.5,
-            y: column.y + column.height * 0.62,
-            rx: column.width * 0.42,
-            ry: column.height * 0.22,
-            rotation: 0.12,
-            color: hexToRgba(palette.surface, 0.14 + refractionOffset * 0.12),
-            blur: blur * 0.82,
-            alpha: column.alpha,
+          paintSoftEllipse(layer.ctx, {
+            x: zone.x - zone.drift * 0.16,
+            y: height * 0.48,
+            rx: coreWidth * (0.52 + fieldBlend * 0.2),
+            ry: height * 0.28,
+            rotation: 0,
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.04 + focusStrength * 0.05),
+            blur: width * (0.04 + focusStrength * 0.03),
             composite: "screen",
           });
-          paintSoftRoundedRect(refractionLayer.ctx, {
-            x: column.x + column.width * (0.14 + refractionOffset * 0.12),
-            y: column.y + column.height * 0.04,
-            width: column.width * 0.1,
-            height: column.height * 0.84,
-            radius: column.radius * 0.22,
-            color: `rgba(255, 255, 255, ${0.06 + refractionOffset * 0.08})`,
-            blur: blur * 0.45,
-            alpha: column.alpha,
-            composite: "screen",
-          });
-          refractionLayer.ctx.restore();
         });
 
-        ctx.drawImage(refractionLayer.canvas, 0, 0);
+        ctx.drawImage(layer.canvas, 0, 0);
       }
 
       function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
-        const composition = buildReededColumnComposition(width, height, currentState, rng);
-        drawReededColumnCore(ctx, width, height, palette, currentState, composition);
-        drawReededColumnInternalRidges(ctx, width, height, palette, currentState, composition);
-        drawReededColumnRefraction(ctx, width, height, palette, currentState, composition);
-        addVignette(ctx, width, height, palette.ink, 0.12 + (currentState.advanced.refractionOffset ?? 0.48) * 0.12);
+        const composition = buildReededFieldComposition(width, height, currentState, rng);
+        drawReededFieldBase(ctx, width, height, palette, currentState, composition);
+        drawReededFieldRefraction(ctx, width, height, palette, currentState, composition);
+        drawReededFieldFocus(ctx, width, height, palette, currentState, composition);
+        addVignette(ctx, width, height, palette.ink, 0.1 + (currentState.advanced.refractionField ?? 0.48) * 0.1);
       }
 
       function drawArchedPillarGeometry(ctx, width, height, palette, currentState, rng) {
@@ -2494,82 +2481,104 @@
         ], centerX, centerY, rotation);
       }
 
-      function buildMirrorSliceComposition(width, height, palette, currentState, rng) {
-        const density = currentState.advanced.sliceCount ?? 0.36;
-        const count = 3 + Math.round(density * 2);
-        const angleBase = -0.72 + (currentState.advanced.sliceAngle ?? 0.56) * 1.36;
-        const variance = currentState.advanced.sliceVariance ?? 0.44;
-        const planes = [];
+      function buildMirrorFieldComposition(width, height, palette, currentState, rng) {
+        const count = 3 + Math.round((currentState.advanced.sliceCount ?? 0.34) * 2);
+        const direction = -0.86 + (currentState.advanced.sliceDirection ?? 0.56) * 1.42;
+        const variance = currentState.advanced.sliceVariance ?? 0.52;
+        const melt = currentState.advanced.sliceMelt ?? 0.48;
+        const reveal = currentState.advanced.sliceReveal ?? 0.58;
+        const masses = [];
 
         for (let index = 0; index < count; index += 1) {
           const progress = count === 1 ? 0.5 : index / (count - 1);
-          const widthBias = 0.78 + Math.sin((progress * 1.4 + 0.12) * Math.PI) * variance * 0.92 + (rng() - 0.5) * 0.34;
-          const planeWidth = width * (0.11 + variance * 0.16 + Math.max(0.04, widthBias * 0.1));
-          const planeHeight = height * (0.52 + (1 - variance) * 0.06 + rng() * 0.16);
-          const taper = planeWidth * (0.16 + variance * 0.58 + rng() * 0.18);
-          const skew = planeWidth * (0.03 + variance * 0.32 + rng() * 0.12);
-          const rotation = angleBase + (rng() - 0.5) * (0.16 + variance * 0.12);
-          const centerX = width * (0.2 + progress * 0.54) + (progress - 0.5) * width * variance * 0.08 + (rng() - 0.5) * width * 0.045;
-          const centerY = height * (0.52 + (progress - 0.5) * (0.06 + variance * 0.08)) + (rng() - 0.5) * height * 0.08;
-          const points = buildMirrorPlanePoints(centerX, centerY, planeWidth, planeHeight, rotation, taper, skew);
-
-          planes.push({
+          const widthBias = 0.78 + Math.sin(progress * Math.PI * 1.35 + 0.24) * variance * 0.84 + (rng() - 0.5) * 0.22;
+          const massWidth = width * (0.16 + variance * 0.18 + Math.max(0.03, widthBias * 0.1));
+          const massHeight = height * (0.72 + rng() * 0.18);
+          const taper = massWidth * (0.12 + variance * 0.42 + rng() * 0.14);
+          const skew = massWidth * (0.04 + variance * 0.16 + rng() * 0.08);
+          const centerX = width * (0.02 + progress * 0.96) + (progress - 0.5) * width * variance * 0.1;
+          const centerY = height * 0.56 + (progress - 0.5) * height * 0.04 + (rng() - 0.5) * height * 0.05;
+          const points = buildMirrorPlanePoints(centerX, centerY, massWidth, massHeight, direction + (rng() - 0.5) * 0.12, taper, skew);
+          masses.push({
             points,
             leftMid: linePoint(points[0], points[3], 0.5),
             rightMid: linePoint(points[1], points[2], 0.5),
             topMid: linePoint(points[0], points[1], 0.5),
             bottomMid: linePoint(points[3], points[2], 0.5),
             fill: index % 3 === 0 ? palette.surface : index % 2 === 0 ? palette.accentSoft : palette.accent,
-            zIndex: index + (progress > 0.55 ? 0.4 : 0),
-            highlight: index === 1 || index === count - 1,
-            edgeWeight: 0.16 + progress * 0.16,
+            melt: melt * (0.72 + rng() * 0.38),
+            reveal: reveal * (0.72 + rng() * 0.34),
+            openStart: 0.08 + melt * (0.18 + rng() * 0.16),
+            openEnd: 0.72 + reveal * (0.12 + rng() * 0.12),
+            zIndex: index + progress * 0.4,
           });
         }
 
-        planes.sort((planeA, planeB) => planeA.zIndex - planeB.zIndex);
-        return { planes };
+        masses.sort((massA, massB) => massA.zIndex - massB.zIndex);
+        return {
+          fieldAngle: direction,
+          masses,
+          fogBands: [
+            {
+              points: [
+                { x: width * -0.12, y: height * 0.18 },
+                { x: width * 0.28, y: height * 0.12 },
+                { x: width * 0.96, y: height * 0.58 },
+                { x: width * 0.54, y: height * 0.64 },
+              ],
+              color: palette.accentSoft,
+            },
+            {
+              points: [
+                { x: width * -0.08, y: height * 0.72 },
+                { x: width * 0.42, y: height * 0.62 },
+                { x: width * 1.08, y: height * 0.94 },
+                { x: width * 0.62, y: height * 1.02 },
+              ],
+              color: palette.surface,
+            },
+          ],
+        };
       }
 
-      function drawMirrorSliceCore(ctx, width, height, palette, currentState, composition) {
+      function drawMirrorSliceMass(ctx, width, height, palette, currentState, composition) {
         const layer = createLayer(width, height);
-        const sliceSharpness = currentState.advanced.sliceSharpness ?? 0.62;
-        const variance = currentState.advanced.sliceVariance ?? 0.44;
-        const blur = width * (0.004 + (1 - sliceSharpness) * 0.02 + currentState.advanced.softness * 0.008);
+        const melt = currentState.advanced.sliceMelt ?? 0.48;
+        const reveal = currentState.advanced.sliceReveal ?? 0.58;
 
-        paintSoftEllipse(layer.ctx, {
-          x: width * 0.68,
-          y: height * 0.24,
-          rx: width * 0.18,
-          ry: height * 0.12,
-          rotation: 0.2,
-          color: hexToRgba(palette.accent, 0.12 + currentState.advanced.glowRadius * 0.08),
-          blur: width * 0.05,
+        composition.fogBands.forEach((band, index) => {
+          layer.ctx.save();
+          tracePolygon(layer.ctx, band.points);
+          layer.ctx.fillStyle = hexToRgba(band.color, 0.04 + reveal * 0.05);
+          layer.ctx.filter = `blur(${width * (0.045 + melt * 0.02)}px)`;
+          layer.ctx.fill();
+          layer.ctx.restore();
         });
 
-        composition.planes.forEach((plane) => {
-          const shadowPoints = plane.points.map((point) => ({
-            x: point.x + width * 0.012,
-            y: point.y + height * 0.018,
-          }));
+        composition.masses.forEach((mass) => {
           layer.ctx.save();
-          tracePolygon(layer.ctx, shadowPoints);
-          layer.ctx.fillStyle = hexToRgba(palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.08);
-          layer.ctx.filter = `blur(${width * 0.014}px)`;
+          tracePolygon(layer.ctx, mass.points);
+          const faceGradient = layer.ctx.createLinearGradient(mass.leftMid.x, mass.leftMid.y, mass.rightMid.x, mass.rightMid.y);
+          faceGradient.addColorStop(0, hexToRgba(palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.08));
+          faceGradient.addColorStop(0.22, hexToRgba(mass.fill, 0.16 + mass.reveal * 0.08));
+          faceGradient.addColorStop(0.52, `rgba(255, 255, 255, ${0.06 + mass.reveal * 0.08})`);
+          faceGradient.addColorStop(0.84, hexToRgba(mass.fill, 0.14 + mass.reveal * 0.06));
+          faceGradient.addColorStop(1, hexToRgba(palette.ink, 0.16 + currentState.advanced.tonalSplit * 0.08));
+          layer.ctx.fillStyle = faceGradient;
+          layer.ctx.filter = `blur(${width * (0.012 + mass.melt * 0.028)}px)`;
           layer.ctx.fill();
           layer.ctx.restore();
 
-          layer.ctx.save();
-          tracePolygon(layer.ctx, plane.points);
-          const faceGradient = layer.ctx.createLinearGradient(plane.leftMid.x, plane.leftMid.y, plane.rightMid.x, plane.rightMid.y);
-          faceGradient.addColorStop(0, hexToRgba(palette.ink, 0.22 + currentState.advanced.tonalSplit * 0.1));
-          faceGradient.addColorStop(0.16, hexToRgba(plane.fill, 0.24 + plane.edgeWeight * 0.14));
-          faceGradient.addColorStop(0.5, `rgba(255, 255, 255, ${0.12 + sliceSharpness * 0.1 + variance * 0.06})`);
-          faceGradient.addColorStop(0.78, hexToRgba(plane.fill, 0.28 + sliceSharpness * 0.12));
-          faceGradient.addColorStop(1, hexToRgba(palette.ink, 0.28 + currentState.advanced.tonalSplit * 0.12));
-          layer.ctx.fillStyle = faceGradient;
-          layer.ctx.filter = `blur(${blur}px)`;
-          layer.ctx.fill();
-          layer.ctx.restore();
+          paintSoftEllipse(layer.ctx, {
+            x: mass.topMid.x,
+            y: mass.topMid.y + height * 0.08,
+            rx: width * (0.08 + mass.melt * 0.08),
+            ry: height * (0.12 + mass.melt * 0.08),
+            rotation: composition.fieldAngle,
+            color: hexToRgba(mass.fill, 0.05 + mass.reveal * 0.05),
+            blur: width * (0.03 + mass.melt * 0.03),
+            composite: "screen",
+          });
         });
 
         ctx.drawImage(layer.canvas, 0, 0);
@@ -2577,67 +2586,73 @@
 
       function drawMirrorSliceEdges(ctx, width, height, palette, currentState, composition) {
         const layer = createLayer(width, height);
-        const sliceSharpness = currentState.advanced.sliceSharpness ?? 0.62;
-        const edgeWidth = 1.5 + sliceSharpness * 3.2;
 
-        composition.planes.forEach((plane) => {
+        composition.masses.forEach((mass, index) => {
+          const leftStart = linePoint(mass.points[0], mass.points[3], mass.openStart);
+          const leftEnd = linePoint(mass.points[0], mass.points[3], Math.min(0.98, mass.openEnd));
+          const rightStart = linePoint(mass.points[1], mass.points[2], mass.openStart * 0.92);
+          const rightEnd = linePoint(mass.points[1], mass.points[2], Math.min(0.98, mass.openEnd - mass.melt * 0.18));
           layer.ctx.save();
           layer.ctx.lineCap = "round";
           layer.ctx.lineJoin = "round";
-          layer.ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 + sliceSharpness * 0.2})`;
-          layer.ctx.lineWidth = edgeWidth;
+          layer.ctx.lineWidth = 1.5 + mass.reveal * 2.6;
+
+          layer.ctx.strokeStyle = `rgba(255, 255, 255, ${0.06 + mass.reveal * 0.14})`;
           layer.ctx.beginPath();
-          layer.ctx.moveTo(plane.points[0].x, plane.points[0].y);
-          layer.ctx.lineTo(plane.points[3].x, plane.points[3].y);
+          layer.ctx.moveTo(leftStart.x, leftStart.y);
+          layer.ctx.lineTo(leftEnd.x, leftEnd.y);
           layer.ctx.stroke();
 
-          layer.ctx.strokeStyle = hexToRgba(palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.12);
-          layer.ctx.lineWidth = edgeWidth * 0.9;
-          layer.ctx.beginPath();
-          layer.ctx.moveTo(plane.points[1].x, plane.points[1].y);
-          layer.ctx.lineTo(plane.points[2].x, plane.points[2].y);
-          layer.ctx.stroke();
+          if (index % 2 === 0 || mass.reveal > 0.55) {
+            layer.ctx.strokeStyle = hexToRgba(palette.ink, 0.06 + currentState.advanced.tonalSplit * 0.08);
+            layer.ctx.beginPath();
+            layer.ctx.moveTo(rightStart.x, rightStart.y);
+            layer.ctx.lineTo(rightEnd.x, rightEnd.y);
+            layer.ctx.stroke();
+          }
+
           layer.ctx.restore();
         });
 
         ctx.drawImage(layer.canvas, 0, 0);
       }
 
-      function drawMirrorSliceHighlights(ctx, width, height, palette, currentState, composition) {
+      function drawMirrorSliceMelt(ctx, width, height, palette, currentState, composition) {
         const layer = createLayer(width, height);
-        const sliceSharpness = currentState.advanced.sliceSharpness ?? 0.62;
-        const variance = currentState.advanced.sliceVariance ?? 0.44;
 
-        composition.planes.forEach((plane, index) => {
-          if (!plane.highlight) {
-            return;
-          }
-
-          const innerA = linePoint(plane.points[0], plane.points[1], 0.26 + variance * 0.08);
-          const innerB = linePoint(plane.points[3], plane.points[2], 0.22 + variance * 0.06);
-          const innerC = linePoint(plane.points[3], plane.points[2], 0.36 + variance * 0.1);
-          const innerD = linePoint(plane.points[0], plane.points[1], 0.4 + variance * 0.08);
-          layer.ctx.save();
-          tracePolygon(layer.ctx, [innerA, innerD, innerC, innerB]);
-          const highlightGradient = layer.ctx.createLinearGradient(innerA.x, innerA.y, innerD.x, innerD.y);
-          highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${0.04 + sliceSharpness * 0.1})`);
-          highlightGradient.addColorStop(0.55, `rgba(255, 255, 255, ${0.12 + sliceSharpness * 0.16})`);
-          highlightGradient.addColorStop(1, hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.05 + sliceSharpness * 0.08));
-          layer.ctx.fillStyle = highlightGradient;
-          layer.ctx.filter = `blur(${width * (0.005 + (1 - sliceSharpness) * 0.014)}px)`;
-          layer.ctx.fill();
-          layer.ctx.restore();
+        composition.masses.forEach((mass, index) => {
+          const meltColor = index % 2 === 0 ? palette.backgroundA : palette.backgroundB;
+          paintSoftEllipse(layer.ctx, {
+            x: mass.leftMid.x - width * 0.03,
+            y: mass.leftMid.y,
+            rx: width * (0.1 + mass.melt * 0.1),
+            ry: height * (0.18 + mass.melt * 0.12),
+            rotation: composition.fieldAngle,
+            color: hexToRgba(meltColor, 0.12 + mass.melt * 0.08),
+            blur: width * (0.05 + mass.melt * 0.05),
+            composite: "source-over",
+          });
+          paintSoftEllipse(layer.ctx, {
+            x: mass.rightMid.x + width * 0.04,
+            y: mass.rightMid.y,
+            rx: width * (0.08 + mass.melt * 0.08),
+            ry: height * (0.2 + mass.melt * 0.1),
+            rotation: composition.fieldAngle,
+            color: hexToRgba(meltColor, 0.08 + mass.melt * 0.08),
+            blur: width * (0.045 + mass.melt * 0.04),
+            composite: "source-over",
+          });
         });
 
         ctx.drawImage(layer.canvas, 0, 0);
       }
 
       function drawMirrorSliceGeometry(ctx, width, height, palette, currentState, rng) {
-        const composition = buildMirrorSliceComposition(width, height, palette, currentState, rng);
-        drawMirrorSliceCore(ctx, width, height, palette, currentState, composition);
+        const composition = buildMirrorFieldComposition(width, height, palette, currentState, rng);
+        drawMirrorSliceMass(ctx, width, height, palette, currentState, composition);
         drawMirrorSliceEdges(ctx, width, height, palette, currentState, composition);
-        drawMirrorSliceHighlights(ctx, width, height, palette, currentState, composition);
-        addVignette(ctx, width, height, palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.12);
+        drawMirrorSliceMelt(ctx, width, height, palette, currentState, composition);
+        addVignette(ctx, width, height, palette.ink, 0.1 + currentState.advanced.tonalSplit * 0.1);
       }
 
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
@@ -2715,24 +2730,15 @@
           });
         }
         if (currentState.shapeMode === "reeded-column") {
-          paintSoftRoundedRect(ctx, {
-            x: width * 0.5,
-            y: height * 0.12,
-            width: width * 0.08,
-            height: height * 0.68,
-            radius: width * 0.04,
-            rotation: 0,
-            color: `rgba(255, 255, 255, ${0.04 + (currentState.advanced.refractionOffset ?? 0.48) * 0.06})`,
-            blur: width * 0.018,
-          });
           paintSoftEllipse(ctx, {
-            x: width * 0.42,
-            y: height * 0.46,
-            rx: width * 0.16,
-            ry: height * 0.14,
-            rotation: -0.18,
-            color: hexToRgba(palette.surface, 0.04 + currentState.advanced.glowRadius * 0.06),
-            blur: width * 0.038,
+            x: width * 0.48,
+            y: height * 0.44,
+            rx: width * (0.22 + (currentState.advanced.focusField ?? 0.54) * 0.1),
+            ry: height * 0.28,
+            rotation: 0,
+            color: hexToRgba(palette.surface, 0.03 + (currentState.advanced.fieldBlend ?? 0.5) * 0.05),
+            blur: width * 0.05,
+            composite: "screen",
           });
         }
         if (currentState.shapeMode === "arched-pillars") {
@@ -2749,13 +2755,13 @@
         }
         if (currentState.shapeMode === "mirror-slices") {
           paintSoftEllipse(ctx, {
-            x: width * 0.64,
-            y: height * 0.18,
-            rx: width * 0.18,
-            ry: height * 0.08,
-            rotation: 0.16,
-            color: hexToRgba(palette.surface, 0.05 + (currentState.advanced.sliceSharpness ?? 0.62) * 0.05),
-            blur: width * 0.032,
+            x: width * 0.58,
+            y: height * 0.22,
+            rx: width * 0.24,
+            ry: height * 0.1,
+            rotation: -0.18 + (currentState.advanced.sliceDirection ?? 0.56) * 0.28,
+            color: hexToRgba(palette.surface, 0.04 + (currentState.advanced.sliceReveal ?? 0.58) * 0.05),
+            blur: width * (0.04 + (currentState.advanced.sliceMelt ?? 0.48) * 0.02),
             composite: "screen",
           });
         }
@@ -2803,7 +2809,7 @@
 
         if (currentState.textureMode === "prism-glass") {
           const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.48;
-          const ridgeContrast = currentState.advanced.refractionOffset ?? currentState.advanced.ridgeContrast ?? 0.54;
+          const ridgeContrast = currentState.advanced.refractionField ?? currentState.advanced.ridgeContrast ?? 0.54;
           drawPrismTexture(ctx, width, height, palette, ridgeDensity, currentState.advanced.prismStrength);
           const step = width * (0.018 + (1 - ridgeDensity) * 0.03);
           ctx.save();
