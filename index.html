@@ -736,15 +736,15 @@
           note: "大形体退后，底纹很轻，整体更像被光擦过的构图。",
           defaults: {
             palette: "dawn",
-            density: 0.38,
-            complexity: 0.46,
+            density: 0.44,
+            complexity: 0.54,
             advanced: {
               shapeCount: 0.32,
-              softness: 0.76,
-              glowRadius: 0.68,
-              patternStrength: 0.18,
-              lightDrift: 0.42,
-              grainFine: 0.16,
+              softness: 0.7,
+              glowRadius: 0.62,
+              patternStrength: 0.26,
+              lightDrift: 0.5,
+              grainFine: 0.22,
             },
           },
           groups: [
@@ -771,15 +771,15 @@
           note: "还是色块，但重点变成几团有重量的软形体，而不是堆很多块。",
           defaults: {
             palette: "mineral",
-            density: 0.52,
-            complexity: 0.62,
+            density: 0.58,
+            complexity: 0.68,
             advanced: {
               shapeCount: 0.46,
-              softness: 0.58,
-              glowRadius: 0.48,
+              softness: 0.52,
+              glowRadius: 0.44,
               offsetPull: 0.44,
-              tonalSplit: 0.55,
-              haze: 0.28,
+              tonalSplit: 0.68,
+              haze: 0.18,
             },
           },
           groups: [
@@ -807,14 +807,14 @@
           defaults: {
             palette: "dusk",
             density: 0.64,
-            complexity: 0.68,
+            complexity: 0.72,
             advanced: {
               shapeCount: 0.38,
-              softness: 0.52,
-              glowRadius: 0.54,
-              patternStrength: 0.52,
-              cellScale: 0.42,
-              vignette: 0.46,
+              softness: 0.48,
+              glowRadius: 0.58,
+              patternStrength: 0.6,
+              cellScale: 0.46,
+              vignette: 0.56,
             },
           },
           groups: [
@@ -841,15 +841,15 @@
           note: "保留流动感，但不画很多线，而是做被拖开的柔软色团。",
           defaults: {
             palette: "harbor",
-            density: 0.44,
-            complexity: 0.6,
+            density: 0.52,
+            complexity: 0.66,
             advanced: {
               shapeCount: 0.34,
-              softness: 0.74,
-              glowRadius: 0.62,
+              softness: 0.66,
+              glowRadius: 0.54,
               drift: 0.58,
-              stretch: 0.52,
-              veil: 0.36,
+              stretch: 0.58,
+              veil: 0.22,
             },
           },
           groups: [
@@ -1324,18 +1324,21 @@
         const haloX = width * (0.22 + rng() * 0.16);
         const haloY = height * (0.2 + rng() * 0.18);
         const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, Math.max(width, height) * 0.78);
-        halo.addColorStop(0, hexToRgba(palette.accentSoft, preset === "tech-texture" ? 0.12 : 0.28));
+        halo.addColorStop(0, hexToRgba(palette.accentSoft, preset === "tech-texture" ? 0.14 : 0.34));
         halo.addColorStop(1, hexToRgba(palette.accentSoft, 0));
         ctx.fillStyle = halo;
         ctx.fillRect(0, 0, width, height);
 
         if (preset === "tech-texture") {
           const glow = ctx.createRadialGradient(width * 0.74, height * 0.26, 0, width * 0.74, height * 0.26, width * 0.74);
-          glow.addColorStop(0, hexToRgba(palette.surface, 0.18));
+          glow.addColorStop(0, hexToRgba(palette.surface, 0.22));
           glow.addColorStop(1, hexToRgba(palette.surface, 0));
           ctx.fillStyle = glow;
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = hexToRgba(palette.ink, 0.12);
+          ctx.fillRect(0, 0, width, height);
+        } else {
+          ctx.fillStyle = hexToRgba(palette.ink, 0.035);
           ctx.fillRect(0, 0, width, height);
         }
       }
@@ -1403,7 +1406,7 @@
         }
         ctx.drawImage(layer.canvas, 0, 0);
 
-        const patternAlpha = 0.008 + currentState.advanced.patternStrength * 0.06;
+        const patternAlpha = 0.014 + currentState.advanced.patternStrength * 0.075;
         const spacing = width * (0.06 + (1 - currentState.density) * 0.06);
         drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
       }
@@ -1514,7 +1517,7 @@
             });
           }
           paintSoftRibbon(layer.ctx, points, {
-            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.42),
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.5),
             lineWidth: width * (0.09 + currentState.complexity * 0.06),
             blur: blur * (0.85 + currentState.advanced.glowRadius * 0.3),
           });
@@ -1525,7 +1528,7 @@
           rx: width * 0.2,
           ry: height * 0.14,
           rotation: 0.42,
-          color: hexToRgba(palette.accentSoft, 0.72),
+          color: hexToRgba(palette.accentSoft, 0.8),
           blur: blur * 0.9,
         });
         ctx.drawImage(layer.canvas, 0, 0);
@@ -1536,7 +1539,7 @@
           rx: width * 0.24,
           ry: height * 0.18,
           rotation: -0.18,
-          color: hexToRgba(palette.accentSoft, 0.16 + currentState.advanced.veil * 0.18),
+          color: hexToRgba(palette.accentSoft, 0.12 + currentState.advanced.veil * 0.16),
           blur: blur * 0.6,
         });
       }
@@ -1579,7 +1582,7 @@
           ctx.stroke();
         }
         if (currentState.preset === "organic-flow") {
-          ctx.fillStyle = hexToRgba(palette.accentSoft, 0.08 + currentState.advanced.veil * 0.2);
+          ctx.fillStyle = hexToRgba(palette.accentSoft, 0.1 + currentState.advanced.veil * 0.18);
           for (let i = 0; i < 3; i += 1) {
             const x = width * (0.12 + rng() * 0.6);
             const y = height * (0.14 + rng() * 0.62);
@@ -1603,7 +1606,7 @@
 
         if (noiseIntensity > 0.01) {
           const dots = Math.round(width * height * (0.00018 + noiseIntensity * 0.0007));
-          ctx.fillStyle = hexToRgba(palette.ink, 0.04 + noiseIntensity * 0.04);
+          ctx.fillStyle = hexToRgba(palette.ink, 0.05 + noiseIntensity * 0.05);
           for (let i = 0; i < dots; i += 1) {
             const x = rng() * width;
             const y = rng() * height;
