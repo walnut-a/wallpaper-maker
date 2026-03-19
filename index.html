@@ -849,6 +849,24 @@
             },
           ],
         },
+        "fluid-blobs": {
+          label: "流体光团",
+          defaults: {
+            shapeCount: 0.4,
+            blobFlow: 0.58,
+            blobSpread: 0.54,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.82, step: 0.01, format: "percent" },
+                { key: "blobFlow", label: "流体起伏", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "blobSpread", label: "铺展范围", min: 0.12, max: 0.92, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
         "flow-ribbons": {
           label: "流动带状",
           defaults: {
@@ -881,6 +899,42 @@
               controls: [
                 { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
                 { key: "ridgeContrast", label: "折射强度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "arched-pillars": {
+          label: "拱门柱影",
+          defaults: {
+            shapeCount: 0.38,
+            archWidth: 0.46,
+            archRise: 0.58,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.76, step: 0.01, format: "percent" },
+                { key: "archWidth", label: "宽窄比例", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "archRise", label: "拱顶抬升", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "mirror-slices": {
+          label: "镜面切片",
+          defaults: {
+            shapeCount: 0.42,
+            sliceAngle: 0.56,
+            sliceSharpness: 0.5,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.84, step: 0.01, format: "percent" },
+                { key: "sliceAngle", label: "切片倾角", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "sliceSharpness", label: "边缘清晰度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1124,7 +1178,7 @@
         if (currentState.preset !== "custom") {
           return palettes[currentState.palette].label;
         }
-        return `${backgroundModes[currentState.backgroundMode].label} · ${textureModes[currentState.textureMode].label}`;
+        return `${shapeModes[currentState.shapeMode].label} · ${textureModes[currentState.textureMode].label}`;
       }
 
       function buildDefaultState(presetKey) {
@@ -1469,6 +1523,10 @@
           backgrounds: ["warm-cool-split", "soft-atmosphere"],
           textures: ["fine-grain", "light-grid"],
         },
+        "fluid-blobs": {
+          backgrounds: ["soft-atmosphere", "deep-cold", "warm-cool-split"],
+          textures: ["fine-grain", "none", "light-grid"],
+        },
         "flow-ribbons": {
           backgrounds: ["soft-atmosphere", "warm-cool-split"],
           textures: ["fine-grain", "none"],
@@ -1476,6 +1534,14 @@
         "reeded-column": {
           backgrounds: ["glass-diffuse", "soft-atmosphere"],
           textures: ["prism-glass", "fine-grain"],
+        },
+        "arched-pillars": {
+          backgrounds: ["soft-atmosphere", "glass-diffuse", "deep-cold"],
+          textures: ["light-grid", "fine-grain", "prism-glass"],
+        },
+        "mirror-slices": {
+          backgrounds: ["deep-cold", "glass-diffuse", "warm-cool-split"],
+          textures: ["prism-glass", "fine-grain", "light-grid"],
         },
       };
 
@@ -1613,6 +1679,99 @@
         const lastPoint = points[points.length - 1];
         ctx.lineTo(lastPoint.x, lastPoint.y);
         ctx.stroke();
+        ctx.restore();
+      }
+
+      function midpoint(pointA, pointB) {
+        return {
+          x: (pointA.x + pointB.x) * 0.5,
+          y: (pointA.y + pointB.y) * 0.5,
+        };
+      }
+
+      function paintSoftBlob(ctx, {
+        x,
+        y,
+        rx,
+        ry,
+        rotation = 0,
+        color,
+        blur = 0,
+        alpha = 1,
+        composite = "source-over",
+        roughness = 0.42,
+        phaseA = 0,
+        phaseB = 0,
+        phaseC = 0,
+      }) {
+        const points = [];
+        const steps = 24;
+        for (let index = 0; index < steps; index += 1) {
+          const angle = (index / steps) * Math.PI * 2;
+          const wave = 1
+            + Math.sin(angle * 2 + phaseA) * roughness * 0.18
+            + Math.sin(angle * 3 + phaseB) * roughness * 0.12
+            + Math.sin(angle * 5 + phaseC) * roughness * 0.08;
+          points.push({
+            x: Math.cos(angle) * rx * wave,
+            y: Math.sin(angle) * ry * (1 + Math.sin(angle * 2 + phaseB) * roughness * 0.1),
+          });
+        }
+
+        ctx.save();
+        ctx.globalCompositeOperation = composite;
+        ctx.globalAlpha = alpha;
+        ctx.filter = `blur(${Math.max(0, blur)}px)`;
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        const firstMid = midpoint(points[0], points[1]);
+        ctx.beginPath();
+        ctx.moveTo(firstMid.x, firstMid.y);
+        for (let index = 1; index <= points.length; index += 1) {
+          const current = points[index % points.length];
+          const next = points[(index + 1) % points.length];
+          const nextMid = midpoint(current, next);
+          ctx.quadraticCurveTo(current.x, current.y, nextMid.x, nextMid.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function paintSoftArch(ctx, {
+        x,
+        y,
+        width,
+        height,
+        archRise = 0.58,
+        rotation = 0,
+        color,
+        blur = 0,
+        alpha = 1,
+        composite = "source-over",
+      }) {
+        const halfWidth = width * 0.5;
+        const halfHeight = height * 0.5;
+        const shoulderY = -halfHeight + height * (0.26 + (1 - archRise) * 0.16);
+        const apexY = -halfHeight + height * (0.04 + (1 - archRise) * 0.12);
+        const controlY = apexY + height * (0.16 + (1 - archRise) * 0.08);
+
+        ctx.save();
+        ctx.globalCompositeOperation = composite;
+        ctx.globalAlpha = alpha;
+        ctx.filter = `blur(${Math.max(0, blur)}px)`;
+        ctx.translate(x + width * 0.5, y + height * 0.5);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+        ctx.moveTo(-halfWidth, halfHeight);
+        ctx.lineTo(-halfWidth, shoulderY);
+        ctx.quadraticCurveTo(-halfWidth * 0.92, controlY, 0, apexY);
+        ctx.quadraticCurveTo(halfWidth * 0.92, controlY, halfWidth, shoulderY);
+        ctx.lineTo(halfWidth, halfHeight);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
         ctx.restore();
       }
 
@@ -1994,6 +2153,62 @@
         addVignette(ctx, width, height, palette.ink, 0.08 + currentState.advanced.stretch * 0.06);
       }
 
+      function drawFluidBlobGeometry(ctx, width, height, palette, currentState, rng) {
+        const layer = createLayer(width, height);
+        const flow = currentState.advanced.blobFlow ?? 0.58;
+        const spread = currentState.advanced.blobSpread ?? 0.54;
+        const blobCount = 2 + Math.round(currentState.advanced.shapeCount * 4 + currentState.density * 1.6);
+        const blur = width * (0.03 + currentState.advanced.softness * 0.08 + currentState.advanced.glowRadius * 0.04);
+
+        paintSoftBlob(layer.ctx, {
+          x: width * (0.46 + (currentState.advanced.lightDrift ?? 0.5) * 0.12),
+          y: height * 0.46,
+          rx: width * (0.18 + spread * 0.12),
+          ry: height * (0.16 + spread * 0.1),
+          rotation: -0.2,
+          roughness: 0.2 + flow * 0.55,
+          phaseA: rng() * Math.PI * 2,
+          phaseB: rng() * Math.PI * 2,
+          phaseC: rng() * Math.PI * 2,
+          color: hexToRgba(palette.surface, 0.88),
+          blur: blur * 0.66,
+        });
+
+        paintSoftBlob(layer.ctx, {
+          x: width * 0.7,
+          y: height * 0.72,
+          rx: width * 0.2,
+          ry: height * 0.18,
+          rotation: 0.16,
+          roughness: 0.16 + flow * 0.42,
+          phaseA: rng() * Math.PI * 2,
+          phaseB: rng() * Math.PI * 2,
+          phaseC: rng() * Math.PI * 2,
+          color: hexToRgba(palette.ink, 0.26 + currentState.advanced.tonalSplit * 0.14),
+          blur: blur * 0.58,
+        });
+
+        for (let index = 0; index < blobCount; index += 1) {
+          const sizeBias = index === 0 ? 1.2 : 1;
+          paintSoftBlob(layer.ctx, {
+            x: width * (0.16 + rng() * (0.54 + spread * 0.18)),
+            y: height * (0.14 + rng() * 0.7),
+            rx: width * (0.08 + rng() * 0.12) * sizeBias,
+            ry: height * (0.07 + rng() * 0.11) * sizeBias,
+            rotation: (rng() - 0.5) * 0.8,
+            roughness: 0.18 + flow * (0.34 + rng() * 0.18),
+            phaseA: rng() * Math.PI * 2,
+            phaseB: rng() * Math.PI * 2,
+            phaseC: rng() * Math.PI * 2,
+            color: hexToRgba(index % 3 === 0 ? palette.accent : index % 2 === 0 ? palette.surface : palette.accentSoft, 0.26 + currentState.advanced.glowRadius * 0.16),
+            blur: blur * (0.58 + rng() * 0.4),
+          });
+        }
+
+        ctx.drawImage(layer.canvas, 0, 0);
+        addVignette(ctx, width, height, palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.08);
+      }
+
       function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
         const layer = createLayer(width, height);
         const blur = width * (0.034 + (currentState.advanced.bandSoftness ?? 0.56) * 0.09 + currentState.advanced.glowRadius * 0.04);
@@ -2062,6 +2277,130 @@
         addVignette(ctx, width, height, palette.ink, 0.14 + currentState.advanced.ridgeContrast * 0.12);
       }
 
+      function drawArchedPillarGeometry(ctx, width, height, palette, currentState, rng) {
+        const layer = createLayer(width, height);
+        const archCount = 2 + Math.round(currentState.advanced.shapeCount * 3 + currentState.density * 1.5);
+        const archWidth = currentState.advanced.archWidth ?? 0.46;
+        const archRise = currentState.advanced.archRise ?? 0.58;
+        const blur = width * (0.022 + currentState.advanced.softness * 0.075 + currentState.advanced.glowRadius * 0.028);
+
+        paintSoftArch(layer.ctx, {
+          x: width * 0.42,
+          y: height * 0.14,
+          width: width * (0.18 + archWidth * 0.16),
+          height: height * 0.68,
+          archRise,
+          color: hexToRgba(palette.ink, 0.48),
+          blur: blur * 0.58,
+        });
+
+        paintSoftArch(layer.ctx, {
+          x: width * 0.22,
+          y: height * 0.22,
+          width: width * (0.16 + archWidth * 0.14),
+          height: height * 0.52,
+          archRise: archRise * 0.92,
+          color: hexToRgba(palette.surface, 0.76),
+          blur: blur * 0.78,
+        });
+
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.68,
+          y: height * 0.28,
+          rx: width * 0.2,
+          ry: height * 0.18,
+          rotation: -0.18,
+          color: hexToRgba(palette.accent, 0.22 + currentState.advanced.glowRadius * 0.12),
+          blur: blur * 1.1,
+        });
+
+        for (let index = 0; index < archCount; index += 1) {
+          const progress = archCount === 1 ? 0.5 : index / (archCount - 1);
+          const localWidth = width * (0.1 + archWidth * (0.08 + rng() * 0.08));
+          const localHeight = height * (0.26 + rng() * 0.38);
+          paintSoftArch(layer.ctx, {
+            x: width * (0.08 + progress * 0.7) + (rng() - 0.5) * width * 0.06,
+            y: height * (0.18 + rng() * 0.44),
+            width: localWidth,
+            height: localHeight,
+            archRise: archRise * (0.82 + rng() * 0.24),
+            rotation: (rng() - 0.5) * 0.12,
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.18 + currentState.advanced.tonalSplit * 0.14),
+            blur: blur * (0.5 + rng() * 0.42),
+          });
+        }
+
+        ctx.drawImage(layer.canvas, 0, 0);
+        addVignette(ctx, width, height, palette.ink, 0.1 + currentState.advanced.tonalSplit * 0.1);
+      }
+
+      function drawMirrorSliceGeometry(ctx, width, height, palette, currentState, rng) {
+        const layer = createLayer(width, height);
+        const sliceCount = 3 + Math.round(currentState.advanced.shapeCount * 5 + currentState.density * 1.6);
+        const sliceAngle = -0.54 + (currentState.advanced.sliceAngle ?? 0.56) * 1.08;
+        const sliceSharpness = currentState.advanced.sliceSharpness ?? 0.5;
+        const blur = width * (0.012 + (1 - sliceSharpness) * 0.08 + currentState.advanced.softness * 0.03);
+
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.64,
+          y: height * 0.26,
+          rx: width * 0.2,
+          ry: height * 0.14,
+          rotation: 0.18,
+          color: hexToRgba(palette.accent, 0.2 + currentState.advanced.glowRadius * 0.12),
+          blur: blur * 1.4,
+        });
+
+        for (let index = 0; index < sliceCount; index += 1) {
+          const progress = sliceCount === 1 ? 0.5 : index / (sliceCount - 1);
+          const sliceWidth = width * (0.032 + rng() * 0.05 + sliceSharpness * 0.03);
+          const sliceHeight = height * (0.38 + rng() * 0.34);
+          const sliceX = width * (0.08 + progress * 0.78) + (rng() - 0.5) * width * 0.05;
+          const sliceY = height * (0.08 + rng() * 0.4);
+          const rotation = sliceAngle + (rng() - 0.5) * (0.16 + (1 - sliceSharpness) * 0.18);
+          const baseColor = index % 3 === 0 ? palette.surface : index % 2 === 0 ? palette.accentSoft : palette.accent;
+
+          paintSoftRoundedRect(layer.ctx, {
+            x: sliceX,
+            y: sliceY,
+            width: sliceWidth,
+            height: sliceHeight,
+            radius: sliceWidth * 0.5,
+            rotation,
+            color: hexToRgba(baseColor, 0.18 + sliceSharpness * 0.2),
+            blur,
+            composite: "screen",
+          });
+
+          paintSoftRoundedRect(layer.ctx, {
+            x: sliceX + sliceWidth * 0.24,
+            y: sliceY + sliceHeight * 0.04,
+            width: sliceWidth * 0.24,
+            height: sliceHeight * 0.88,
+            radius: sliceWidth * 0.12,
+            rotation,
+            color: `rgba(255, 255, 255, ${0.16 + sliceSharpness * 0.16})`,
+            blur: blur * 0.28,
+            composite: "screen",
+          });
+
+          paintSoftRoundedRect(layer.ctx, {
+            x: sliceX - sliceWidth * 0.2,
+            y: sliceY + sliceHeight * 0.08,
+            width: sliceWidth * 0.16,
+            height: sliceHeight * 0.84,
+            radius: sliceWidth * 0.08,
+            rotation,
+            color: hexToRgba(palette.ink, 0.1 + currentState.advanced.tonalSplit * 0.06),
+            blur: blur * 0.24,
+            composite: "multiply",
+          });
+        }
+
+        ctx.drawImage(layer.canvas, 0, 0);
+        addVignette(ctx, width, height, palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.12);
+      }
+
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
@@ -2120,6 +2459,22 @@
             ctx.fill();
           }
         }
+        if (currentState.shapeMode === "fluid-blobs") {
+          paintSoftBlob(ctx, {
+            x: width * 0.34,
+            y: height * 0.24,
+            rx: width * 0.14,
+            ry: height * 0.1,
+            rotation: -0.16,
+            roughness: 0.16 + (currentState.advanced.blobFlow ?? 0.58) * 0.36,
+            phaseA: rng() * Math.PI * 2,
+            phaseB: rng() * Math.PI * 2,
+            phaseC: rng() * Math.PI * 2,
+            color: hexToRgba(palette.accentSoft, 0.08 + currentState.advanced.glowRadius * 0.1),
+            blur: width * 0.04,
+            composite: "screen",
+          });
+        }
         if (currentState.shapeMode === "reeded-column") {
           paintSoftRoundedRect(ctx, {
             x: width * 0.54,
@@ -2140,6 +2495,30 @@
             color: hexToRgba(palette.surface, 0.06 + currentState.advanced.glowRadius * 0.08),
             blur: width * 0.05,
           });
+        }
+        if (currentState.shapeMode === "arched-pillars") {
+          paintSoftArch(ctx, {
+            x: width * 0.18,
+            y: height * 0.16,
+            width: width * 0.22,
+            height: height * 0.5,
+            archRise: (currentState.advanced.archRise ?? 0.58) * 0.96,
+            color: `rgba(255, 255, 255, ${0.07 + currentState.advanced.glowRadius * 0.08})`,
+            blur: width * 0.022,
+            composite: "screen",
+          });
+        }
+        if (currentState.shapeMode === "mirror-slices") {
+          const gradient = ctx.createLinearGradient(width * 0.2, height * 0.82, width * 0.76, height * 0.16);
+          gradient.addColorStop(0, hexToRgba(palette.surface, 0));
+          gradient.addColorStop(0.5, hexToRgba(palette.accentSoft, 0.22));
+          gradient.addColorStop(1, hexToRgba(palette.surface, 0));
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 3 + (currentState.advanced.sliceSharpness ?? 0.5) * 8;
+          ctx.beginPath();
+          ctx.moveTo(width * 0.26, height * 0.84);
+          ctx.lineTo(width * 0.72, height * 0.18);
+          ctx.stroke();
         }
         ctx.restore();
       }
@@ -2184,10 +2563,12 @@
         }
 
         if (currentState.textureMode === "prism-glass") {
-          drawPrismTexture(ctx, width, height, palette, currentState.advanced.ridgeDensity, currentState.advanced.prismStrength);
-          const step = width * (0.018 + (1 - currentState.advanced.ridgeDensity) * 0.03);
+          const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.48;
+          const ridgeContrast = currentState.advanced.ridgeContrast ?? 0.54;
+          drawPrismTexture(ctx, width, height, palette, ridgeDensity, currentState.advanced.prismStrength);
+          const step = width * (0.018 + (1 - ridgeDensity) * 0.03);
           ctx.save();
-          ctx.strokeStyle = `rgba(255, 255, 255, ${0.018 + currentState.advanced.ridgeContrast * 0.028})`;
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.018 + ridgeContrast * 0.028})`;
           ctx.lineWidth = 1;
           for (let x = step * 0.5; x < width; x += step) {
             line(ctx, x, 0, x, height);
@@ -2223,11 +2604,20 @@
           case "soft-blocks":
             drawBlockGeometry(ctx, width, height, palette, currentState, rng);
             break;
+          case "fluid-blobs":
+            drawFluidBlobGeometry(ctx, width, height, palette, currentState, rng);
+            break;
           case "flow-ribbons":
             drawOrganicGeometry(ctx, width, height, palette, currentState, rng);
             break;
           case "reeded-column":
             drawReededGlassGeometry(ctx, width, height, palette, currentState, rng);
+            break;
+          case "arched-pillars":
+            drawArchedPillarGeometry(ctx, width, height, palette, currentState, rng);
+            break;
+          case "mirror-slices":
+            drawMirrorSliceGeometry(ctx, width, height, palette, currentState, rng);
             break;
           default:
             drawMinimalGeometry(ctx, width, height, palette, currentState, rng);
