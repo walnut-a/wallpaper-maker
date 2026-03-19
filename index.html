@@ -562,8 +562,26 @@
         </header>
 
         <section class="panel-section" aria-labelledby="preset-heading">
-          <h2 id="preset-heading" class="section-title">风格预设</h2>
+          <h2 id="preset-heading" class="section-title">组合预设</h2>
           <div id="presetGrid" class="preset-grid"></div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="composition-heading">
+          <h2 id="composition-heading" class="section-title">自由组合</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="backgroundModeSelect">背景气氛</label>
+              <select id="backgroundModeSelect" name="backgroundMode"></select>
+            </div>
+            <div class="field">
+              <label for="shapeModeSelect">主体图形</label>
+              <select id="shapeModeSelect" name="shapeMode"></select>
+            </div>
+            <div class="field">
+              <label for="textureModeSelect">纹理覆盖</label>
+              <select id="textureModeSelect" name="textureMode"></select>
+            </div>
+          </div>
         </section>
 
         <section class="panel-section" aria-labelledby="size-heading">
@@ -615,7 +633,8 @@
           <div class="action-grid">
             <button id="regenerateButton" class="action-button" type="button">重新生成</button>
             <button id="randomizeButton" class="action-button" type="button">随机参数</button>
-            <button id="resetButton" class="action-button" type="button">重置当前预设</button>
+            <button id="randomizeMixButton" class="action-button" type="button">随机混搭</button>
+            <button id="resetButton" class="action-button" type="button">恢复当前组合</button>
             <button id="exportButton" class="action-button primary" type="button">导出 PNG</button>
           </div>
         </section>
@@ -721,10 +740,217 @@
         },
       };
 
-      const presetDefinitions = {
+      const sharedAdvancedGroup = {
+        title: "组合控制",
+        controls: [
+          { key: "softness", label: "边缘软化", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+          { key: "glowRadius", label: "光晕半径", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+          { key: "tonalSplit", label: "明暗反差", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+          { key: "grainFine", label: "颗粒细度", min: 0, max: 0.4, step: 0.01, format: "percent" },
+        ],
+      };
+
+      const sharedAdvancedDefaults = {
+        softness: 0.58,
+        glowRadius: 0.55,
+        tonalSplit: 0.58,
+        grainFine: 0.16,
+      };
+
+      const backgroundModes = {
+        "soft-atmosphere": {
+          label: "柔雾渐变",
+          defaults: {
+            lightDrift: 0.5,
+          },
+          groups: [
+            {
+              title: "背景控制",
+              controls: [
+                { key: "lightDrift", label: "冷暖偏移", min: 0, max: 1, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "deep-cold": {
+          label: "深场冷光",
+          defaults: {
+            vignette: 0.56,
+          },
+          groups: [
+            {
+              title: "背景控制",
+              controls: [
+                { key: "vignette", label: "暗角强度", min: 0.05, max: 0.85, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "warm-cool-split": {
+          label: "暖冷对冲",
+          defaults: {
+            lightDrift: 0.44,
+            haze: 0.18,
+          },
+          groups: [
+            {
+              title: "背景控制",
+              controls: [
+                { key: "lightDrift", label: "冷暖偏移", min: 0, max: 1, step: 0.01, format: "percent" },
+                { key: "haze", label: "雾化程度", min: 0, max: 0.5, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "glass-diffuse": {
+          label: "玻璃漫反射",
+          defaults: {
+            bandSoftness: 0.56,
+          },
+          groups: [
+            {
+              title: "背景控制",
+              controls: [
+                { key: "bandSoftness", label: "雾化程度", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+      };
+
+      const shapeModes = {
+        "minimal-form": {
+          label: "极简大形体",
+          defaults: {
+            shapeCount: 0.32,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "soft-blocks": {
+          label: "色块软构成",
+          defaults: {
+            shapeCount: 0.46,
+            offsetPull: 0.44,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.1, max: 0.8, step: 0.01, format: "percent" },
+                { key: "offsetPull", label: "块面偏移", min: 0, max: 0.85, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "flow-ribbons": {
+          label: "流动带状",
+          defaults: {
+            shapeCount: 0.34,
+            drift: 0.58,
+            stretch: 0.58,
+            veil: 0.22,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
+                { key: "drift", label: "漂移幅度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "stretch", label: "流向拉伸", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "veil", label: "纱幕透明度", min: 0.05, max: 0.72, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "reeded-column": {
+          label: "长虹玻璃柱面",
+          defaults: {
+            ridgeDensity: 0.48,
+            ridgeContrast: 0.68,
+          },
+          groups: [
+            {
+              title: "主体控制",
+              controls: [
+                { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
+                { key: "ridgeContrast", label: "折射强度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+      };
+
+      const textureModes = {
+        none: {
+          label: "无",
+          defaults: {},
+          groups: [],
+        },
+        "light-grid": {
+          label: "轻网格",
+          defaults: {
+            patternStrength: 0.26,
+          },
+          groups: [
+            {
+              title: "纹理控制",
+              controls: [
+                { key: "patternStrength", label: "底纹强度", min: 0, max: 0.5, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        honeycomb: {
+          label: "蜂窝",
+          defaults: {
+            patternStrength: 0.6,
+            cellScale: 0.46,
+          },
+          groups: [
+            {
+              title: "纹理控制",
+              controls: [
+                { key: "patternStrength", label: "底纹强度", min: 0.1, max: 0.88, step: 0.01, format: "percent" },
+                { key: "cellScale", label: "蜂窝尺度", min: 0.12, max: 0.82, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "fine-grain": {
+          label: "细颗粒",
+          defaults: {},
+          groups: [],
+        },
+        "prism-glass": {
+          label: "玻璃肌理",
+          defaults: {
+            prismStrength: 0.24,
+          },
+          groups: [
+            {
+              title: "纹理控制",
+              controls: [
+                { key: "prismStrength", label: "玻璃肌理", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+      };
+
+      const compositionPresets = {
         "minimal-grid": {
           label: "极简秩序感",
           note: "大形体退后，底纹很轻，整体更像被光擦过的构图。",
+          backgroundMode: "soft-atmosphere",
+          shapeMode: "minimal-form",
+          textureMode: "light-grid",
           defaults: {
             palette: "dawn",
             density: 0.44,
@@ -733,33 +959,19 @@
               shapeCount: 0.32,
               softness: 0.7,
               glowRadius: 0.62,
+              tonalSplit: 0.48,
               patternStrength: 0.26,
               lightDrift: 0.5,
               grainFine: 0.22,
             },
           },
-          groups: [
-            {
-              title: "形体",
-              controls: [
-                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
-                { key: "softness", label: "边缘软化", min: 0.18, max: 0.95, step: 0.01, format: "percent" },
-                { key: "glowRadius", label: "光晕半径", min: 0.18, max: 0.95, step: 0.01, format: "percent" },
-              ],
-            },
-            {
-              title: "气氛",
-              controls: [
-                { key: "patternStrength", label: "底纹强度", min: 0, max: 0.5, step: 0.01, format: "percent" },
-                { key: "lightDrift", label: "冷暖偏移", min: 0, max: 1, step: 0.01, format: "percent" },
-                { key: "grainFine", label: "颗粒细度", min: 0, max: 0.4, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
         },
         "bold-blocks": {
           label: "大色块构成",
           note: "还是色块，但重点变成几团有重量的软形体，而不是堆很多块。",
+          backgroundMode: "warm-cool-split",
+          shapeMode: "soft-blocks",
+          textureMode: "fine-grain",
           defaults: {
             palette: "mineral",
             density: 0.58,
@@ -770,31 +982,17 @@
               glowRadius: 0.44,
               offsetPull: 0.44,
               tonalSplit: 0.68,
+              grainFine: 0.18,
               haze: 0.18,
             },
           },
-          groups: [
-            {
-              title: "形体",
-              controls: [
-                { key: "shapeCount", label: "主形体数量", min: 0.1, max: 0.8, step: 0.01, format: "percent" },
-                { key: "softness", label: "边缘软化", min: 0.12, max: 0.9, step: 0.01, format: "percent" },
-                { key: "glowRadius", label: "光晕半径", min: 0.08, max: 0.85, step: 0.01, format: "percent" },
-              ],
-            },
-            {
-              title: "层次",
-              controls: [
-                { key: "offsetPull", label: "块面偏移", min: 0, max: 0.85, step: 0.01, format: "percent" },
-                { key: "tonalSplit", label: "明暗反差", min: 0.08, max: 0.9, step: 0.01, format: "percent" },
-                { key: "haze", label: "雾化程度", min: 0, max: 0.5, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
         },
         "tech-texture": {
           label: "科技纹理感",
           note: "不是靠线束堆科技感，而是靠深色场、模糊光斑和轻蜂窝。",
+          backgroundMode: "deep-cold",
+          shapeMode: "minimal-form",
+          textureMode: "honeycomb",
           defaults: {
             palette: "dusk",
             density: 0.64,
@@ -803,33 +1001,20 @@
               shapeCount: 0.38,
               softness: 0.48,
               glowRadius: 0.58,
+              tonalSplit: 0.62,
+              grainFine: 0.18,
               patternStrength: 0.6,
               cellScale: 0.46,
               vignette: 0.56,
             },
           },
-          groups: [
-            {
-              title: "光团",
-              controls: [
-                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
-                { key: "softness", label: "边缘软化", min: 0.12, max: 0.85, step: 0.01, format: "percent" },
-                { key: "glowRadius", label: "光晕半径", min: 0.1, max: 0.92, step: 0.01, format: "percent" },
-              ],
-            },
-            {
-              title: "秩序",
-              controls: [
-                { key: "patternStrength", label: "底纹强度", min: 0.1, max: 0.88, step: 0.01, format: "percent" },
-                { key: "cellScale", label: "蜂窝尺度", min: 0.12, max: 0.82, step: 0.01, format: "percent" },
-                { key: "vignette", label: "暗角强度", min: 0.05, max: 0.85, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
         },
         "organic-flow": {
           label: "有机生成感",
           note: "保留流动感，但不画很多线，而是做被拖开的柔软色团。",
+          backgroundMode: "soft-atmosphere",
+          shapeMode: "flow-ribbons",
+          textureMode: "fine-grain",
           defaults: {
             palette: "harbor",
             density: 0.52,
@@ -838,69 +1023,45 @@
               shapeCount: 0.34,
               softness: 0.66,
               glowRadius: 0.54,
+              tonalSplit: 0.46,
+              grainFine: 0.18,
               drift: 0.58,
               stretch: 0.58,
               veil: 0.22,
             },
           },
-          groups: [
-            {
-              title: "形体",
-              controls: [
-                { key: "shapeCount", label: "主形体数量", min: 0.08, max: 0.72, step: 0.01, format: "percent" },
-                { key: "softness", label: "边缘软化", min: 0.18, max: 0.95, step: 0.01, format: "percent" },
-                { key: "glowRadius", label: "光晕半径", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
-              ],
-            },
-            {
-              title: "流向",
-              controls: [
-                { key: "drift", label: "漂移幅度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
-                { key: "stretch", label: "流向拉伸", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
-                { key: "veil", label: "纱幕透明度", min: 0.05, max: 0.72, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
         },
         "reeded-glass": {
           label: "长虹玻璃感",
           note: "像隔着带棱线的玻璃看颜色，既有竖向秩序，也有一点折射和雾感。",
+          backgroundMode: "glass-diffuse",
+          shapeMode: "reeded-column",
+          textureMode: "prism-glass",
           defaults: {
             palette: "amberglass",
             density: 0.54,
             complexity: 0.66,
             advanced: {
+              softness: 0.5,
               ridgeDensity: 0.48,
               ridgeContrast: 0.68,
               glowRadius: 0.62,
+              tonalSplit: 0.58,
               prismStrength: 0.24,
               bandSoftness: 0.56,
               grainFine: 0.12,
             },
           },
-          groups: [
-            {
-              title: "玻璃",
-              controls: [
-                { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
-                { key: "ridgeContrast", label: "折射强度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
-                { key: "glowRadius", label: "光晕半径", min: 0.08, max: 0.9, step: 0.01, format: "percent" },
-              ],
-            },
-            {
-              title: "质感",
-              controls: [
-                { key: "prismStrength", label: "玻璃肌理", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
-                { key: "bandSoftness", label: "雾化程度", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
-                { key: "grainFine", label: "颗粒细度", min: 0, max: 0.4, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
         },
       };
 
+      const presetDefinitions = compositionPresets;
+
       const elements = {
         presetGrid: document.getElementById("presetGrid"),
+        backgroundModeSelect: document.getElementById("backgroundModeSelect"),
+        shapeModeSelect: document.getElementById("shapeModeSelect"),
+        textureModeSelect: document.getElementById("textureModeSelect"),
         sizePreset: document.getElementById("sizePreset"),
         widthInput: document.getElementById("widthInput"),
         heightInput: document.getElementById("heightInput"),
@@ -912,6 +1073,7 @@
         seedInput: document.getElementById("seedInput"),
         regenerateButton: document.getElementById("regenerateButton"),
         randomizeButton: document.getElementById("randomizeButton"),
+        randomizeMixButton: document.getElementById("randomizeMixButton"),
         resetButton: document.getElementById("resetButton"),
         exportButton: document.getElementById("exportButton"),
         feedback: document.getElementById("feedback"),
@@ -924,10 +1086,54 @@
         previewPaletteLabel: document.getElementById("previewPaletteLabel"),
       };
 
+      function getAdvancedGroupControls(group) {
+        return Array.isArray(group?.controls) ? group.controls : [];
+      }
+
+      function getModeGroups(registry, key) {
+        return registry[key]?.groups ?? [];
+      }
+
+      function getCurrentAdvancedGroups(currentState) {
+        return [
+          sharedAdvancedGroup,
+          ...getModeGroups(backgroundModes, currentState.backgroundMode),
+          ...getModeGroups(shapeModes, currentState.shapeMode),
+          ...getModeGroups(textureModes, currentState.textureMode),
+        ];
+      }
+
+      function buildAdvancedDefaults({ presetKey, backgroundMode, shapeMode, textureMode }) {
+        return {
+          ...sharedAdvancedDefaults,
+          ...(backgroundModes[backgroundMode]?.defaults ?? {}),
+          ...(shapeModes[shapeMode]?.defaults ?? {}),
+          ...(textureModes[textureMode]?.defaults ?? {}),
+          ...(presetKey && compositionPresets[presetKey]?.defaults.advanced ? compositionPresets[presetKey].defaults.advanced : {}),
+        };
+      }
+
+      function getPresetLabel(presetKey) {
+        if (presetKey === "custom") {
+          return "自定义组合";
+        }
+        return presetDefinitions[presetKey]?.label ?? "自定义组合";
+      }
+
+      function getCompositionSummary(currentState) {
+        if (currentState.preset !== "custom") {
+          return palettes[currentState.palette].label;
+        }
+        return `${backgroundModes[currentState.backgroundMode].label} · ${textureModes[currentState.textureMode].label}`;
+      }
+
       function buildDefaultState(presetKey) {
         const preset = presetDefinitions[presetKey];
         return {
           preset: presetKey,
+          backgroundMode: preset.backgroundMode,
+          shapeMode: preset.shapeMode,
+          textureMode: preset.textureMode,
           sizePreset: defaultSizePreset.value,
           width: defaultSizePreset.width,
           height: defaultSizePreset.height,
@@ -935,7 +1141,12 @@
           palette: preset.defaults.palette,
           density: preset.defaults.density,
           complexity: preset.defaults.complexity,
-          advanced: { ...preset.defaults.advanced },
+          advanced: buildAdvancedDefaults({
+            presetKey,
+            backgroundMode: preset.backgroundMode,
+            shapeMode: preset.shapeMode,
+            textureMode: preset.textureMode,
+          }),
         };
       }
 
@@ -1029,6 +1240,30 @@
           option.textContent = palette.label;
           elements.paletteSelect.appendChild(option);
         });
+
+        elements.backgroundModeSelect.innerHTML = "";
+        Object.entries(backgroundModes).forEach(([key, mode]) => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = mode.label;
+          elements.backgroundModeSelect.appendChild(option);
+        });
+
+        elements.shapeModeSelect.innerHTML = "";
+        Object.entries(shapeModes).forEach(([key, mode]) => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = mode.label;
+          elements.shapeModeSelect.appendChild(option);
+        });
+
+        elements.textureModeSelect.innerHTML = "";
+        Object.entries(textureModes).forEach(([key, mode]) => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = mode.label;
+          elements.textureModeSelect.appendChild(option);
+        });
       }
 
       function formatAdvancedValue(control, value) {
@@ -1039,10 +1274,10 @@
       }
 
       function renderAdvancedControls() {
-        const preset = presetDefinitions[state.preset];
         elements.advancedContent.innerHTML = "";
+        const groups = getCurrentAdvancedGroups(state);
 
-        preset.groups.forEach((group) => {
+        groups.forEach((group) => {
           const wrapper = document.createElement("section");
           wrapper.className = "advanced-group";
 
@@ -1102,6 +1337,9 @@
 
       function syncControlValues() {
         elements.sizePreset.value = state.sizePreset;
+        elements.backgroundModeSelect.value = state.backgroundMode;
+        elements.shapeModeSelect.value = state.shapeMode;
+        elements.textureModeSelect.value = state.textureMode;
         elements.widthInput.value = String(state.width);
         elements.heightInput.value = String(state.height);
         elements.paletteSelect.value = state.palette;
@@ -1110,9 +1348,9 @@
         elements.seedInput.value = String(state.seed);
         elements.densityValue.textContent = formatPercent(state.density);
         elements.complexityValue.textContent = formatPercent(state.complexity);
-        elements.previewPresetLabel.textContent = presetDefinitions[state.preset].label;
+        elements.previewPresetLabel.textContent = getPresetLabel(state.preset);
         elements.previewSizeLabel.textContent = `${state.width} × ${state.height}`;
-        elements.previewPaletteLabel.textContent = palettes[state.palette].label;
+        elements.previewPaletteLabel.textContent = getCompositionSummary(state);
       }
 
       function mergePresetDefaults(presetKey, preservePalette = false) {
@@ -1120,11 +1358,38 @@
         state = {
           ...state,
           preset: presetKey,
+          backgroundMode: preset.backgroundMode,
+          shapeMode: preset.shapeMode,
+          textureMode: preset.textureMode,
           density: preset.defaults.density,
           complexity: preset.defaults.complexity,
           palette: preservePalette ? state.palette : preset.defaults.palette,
-          advanced: { ...preset.defaults.advanced },
+          advanced: buildAdvancedDefaults({
+            presetKey,
+            backgroundMode: preset.backgroundMode,
+            shapeMode: preset.shapeMode,
+            textureMode: preset.textureMode,
+          }),
         };
+      }
+
+      function applyModeChange(modeKey, nextValue) {
+        const nextAdvanced = {
+          ...state.advanced,
+          ...(modeKey === "backgroundMode" ? backgroundModes[nextValue]?.defaults : {}),
+          ...(modeKey === "shapeMode" ? shapeModes[nextValue]?.defaults : {}),
+          ...(modeKey === "textureMode" ? textureModes[nextValue]?.defaults : {}),
+        };
+        state = {
+          ...state,
+          preset: "custom",
+          [modeKey]: nextValue,
+          advanced: nextAdvanced,
+        };
+        syncPresetSelection();
+        syncControlValues();
+        renderAdvancedControls();
+        queueRender();
       }
 
       function switchPreset(presetKey) {
@@ -1173,13 +1438,13 @@
 
       function randomizeCurrentPreset() {
         const rng = makeRng(nextSeed());
-        const preset = presetDefinitions[state.preset];
+        const groups = getCurrentAdvancedGroups(state);
         state.seed = Math.floor(rng() * 999999999) + 1;
         state.palette = choose(rng, Object.keys(palettes));
         state.density = Number((0.2 + rng() * 0.62).toFixed(2));
         state.complexity = Number((0.2 + rng() * 0.68).toFixed(2));
-        const nextAdvanced = {};
-        preset.groups.forEach((group) => {
+        const nextAdvanced = { ...state.advanced };
+        groups.forEach((group) => {
           group.controls.forEach((control) => {
             const randomized = control.min + rng() * (control.max - control.min);
             nextAdvanced[control.key] = Number(randomized.toFixed(2));
@@ -1191,9 +1456,74 @@
         queueRender();
       }
 
+      function randomizeCurrentComposition() {
+        randomizeCurrentPreset();
+      }
+
+      const mixCompatibility = {
+        "minimal-form": {
+          backgrounds: ["soft-atmosphere", "deep-cold", "warm-cool-split"],
+          textures: ["light-grid", "honeycomb", "fine-grain"],
+        },
+        "soft-blocks": {
+          backgrounds: ["warm-cool-split", "soft-atmosphere"],
+          textures: ["fine-grain", "light-grid"],
+        },
+        "flow-ribbons": {
+          backgrounds: ["soft-atmosphere", "warm-cool-split"],
+          textures: ["fine-grain", "none"],
+        },
+        "reeded-column": {
+          backgrounds: ["glass-diffuse", "soft-atmosphere"],
+          textures: ["prism-glass", "fine-grain"],
+        },
+      };
+
+      function randomizeMix() {
+        const rng = makeRng(nextSeed());
+        const nextShapeMode = choose(rng, Object.keys(shapeModes));
+        const compatibility = mixCompatibility[nextShapeMode] ?? {
+          backgrounds: Object.keys(backgroundModes),
+          textures: Object.keys(textureModes),
+        };
+        const nextBackgroundMode = choose(rng, compatibility.backgrounds);
+        const nextTextureMode = choose(rng, compatibility.textures);
+        state = {
+          ...state,
+          preset: "custom",
+          backgroundMode: nextBackgroundMode,
+          shapeMode: nextShapeMode,
+          textureMode: nextTextureMode,
+          seed: Math.floor(rng() * 999999999) + 1,
+          palette: choose(rng, Object.keys(palettes)),
+          density: Number((0.2 + rng() * 0.62).toFixed(2)),
+          complexity: Number((0.2 + rng() * 0.68).toFixed(2)),
+          advanced: buildAdvancedDefaults({
+            backgroundMode: nextBackgroundMode,
+            shapeMode: nextShapeMode,
+            textureMode: nextTextureMode,
+          }),
+        };
+        syncPresetSelection();
+        syncControlValues();
+        renderAdvancedControls();
+        queueRender();
+      }
+
       function resetCurrentPreset() {
-        const currentPreset = state.preset;
-        mergePresetDefaults(currentPreset, false);
+        if (state.preset === "custom") {
+          state = {
+            ...state,
+            advanced: buildAdvancedDefaults({
+              backgroundMode: state.backgroundMode,
+              shapeMode: state.shapeMode,
+              textureMode: state.textureMode,
+            }),
+          };
+        } else {
+          const currentPreset = state.preset;
+          mergePresetDefaults(currentPreset, false);
+        }
         state.seed = 314159;
         state.width = lastValidDimensions.width;
         state.height = lastValidDimensions.height;
@@ -1201,7 +1531,7 @@
         syncControlValues();
         renderAdvancedControls();
         queueRender();
-        setFeedback("当前预设已恢复默认参数", "success");
+        setFeedback(state.preset === "custom" ? "当前组合已恢复默认参数" : "当前预设已恢复默认参数", "success");
       }
 
       function line(ctx, x1, y1, x2, y2) {
@@ -1394,11 +1724,8 @@
         ctx.fillRect(0, 0, width, height);
       }
 
-      function drawBackground(ctx, width, height, palette, preset, currentState, rng) {
-        const driftBase = currentState.advanced.lightDrift
-          ?? currentState.advanced.offsetPull
-          ?? currentState.advanced.drift
-          ?? 0.42;
+      function drawBackground(ctx, width, height, palette, currentState, rng) {
+        const driftBase = currentState.advanced.lightDrift ?? 0.42;
         const gradient = ctx.createLinearGradient(0, 0, width * (0.4 + driftBase * 0.35), height);
         gradient.addColorStop(0, palette.backgroundA);
         gradient.addColorStop(1, palette.backgroundB);
@@ -1408,12 +1735,17 @@
         const haloX = width * (0.22 + rng() * 0.16);
         const haloY = height * (0.2 + rng() * 0.18);
         const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, Math.max(width, height) * 0.78);
-        halo.addColorStop(0, hexToRgba(palette.accentSoft, preset === "tech-texture" ? 0.14 : 0.34));
+        const baseHaloAlpha = currentState.backgroundMode === "deep-cold"
+          ? 0.14
+          : currentState.backgroundMode === "glass-diffuse"
+            ? 0.24
+            : 0.34;
+        halo.addColorStop(0, hexToRgba(palette.accentSoft, baseHaloAlpha));
         halo.addColorStop(1, hexToRgba(palette.accentSoft, 0));
         ctx.fillStyle = halo;
         ctx.fillRect(0, 0, width, height);
 
-        if (preset === "tech-texture") {
+        if (currentState.backgroundMode === "deep-cold") {
           const glow = ctx.createRadialGradient(width * 0.74, height * 0.26, 0, width * 0.74, height * 0.26, width * 0.74);
           glow.addColorStop(0, hexToRgba(palette.surface, 0.22));
           glow.addColorStop(1, hexToRgba(palette.surface, 0));
@@ -1421,7 +1753,7 @@
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = hexToRgba(palette.ink, 0.12);
           ctx.fillRect(0, 0, width, height);
-        } else if (preset === "reeded-glass") {
+        } else if (currentState.backgroundMode === "glass-diffuse") {
           const warmGlow = ctx.createRadialGradient(width * 0.24, height * 0.18, 0, width * 0.24, height * 0.18, width * 0.74);
           warmGlow.addColorStop(0, hexToRgba(palette.accent, 0.3));
           warmGlow.addColorStop(1, hexToRgba(palette.accent, 0));
@@ -1441,6 +1773,21 @@
           ctx.fillRect(0, 0, width, height);
 
           ctx.fillStyle = hexToRgba(palette.ink, 0.06);
+          ctx.fillRect(0, 0, width, height);
+        } else if (currentState.backgroundMode === "warm-cool-split") {
+          const warmGlow = ctx.createRadialGradient(width * 0.22, height * 0.28, 0, width * 0.22, height * 0.28, width * 0.62);
+          warmGlow.addColorStop(0, hexToRgba(palette.accent, 0.22 + (currentState.advanced.tonalSplit ?? 0.58) * 0.08));
+          warmGlow.addColorStop(1, hexToRgba(palette.accent, 0));
+          ctx.fillStyle = warmGlow;
+          ctx.fillRect(0, 0, width, height);
+
+          const coolGlow = ctx.createRadialGradient(width * 0.74, height * 0.74, 0, width * 0.74, height * 0.74, width * 0.66);
+          coolGlow.addColorStop(0, hexToRgba(palette.surface, 0.18 + (currentState.advanced.haze ?? 0.18) * 0.16));
+          coolGlow.addColorStop(1, hexToRgba(palette.surface, 0));
+          ctx.fillStyle = coolGlow;
+          ctx.fillRect(0, 0, width, height);
+
+          ctx.fillStyle = hexToRgba(palette.ink, 0.05);
           ctx.fillRect(0, 0, width, height);
         } else {
           ctx.fillStyle = hexToRgba(palette.ink, 0.035);
@@ -1510,10 +1857,6 @@
           });
         }
         ctx.drawImage(layer.canvas, 0, 0);
-
-        const patternAlpha = 0.014 + currentState.advanced.patternStrength * 0.075;
-        const spacing = width * (0.06 + (1 - currentState.density) * 0.06);
-        drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
         addVignette(ctx, width, height, palette.ink, 0.05 + currentState.complexity * 0.04);
       }
 
@@ -1545,7 +1888,7 @@
           rx: width * 0.24,
           ry: height * 0.12,
           color: hexToRgba(palette.accentSoft, 0.88),
-          blur: blur * (0.82 + currentState.advanced.haze * 0.6),
+          blur: blur * (0.82 + (currentState.advanced.haze ?? 0.18) * 0.6),
         });
         for (let index = 0; index < shapeCount; index += 1) {
           paintSoftRoundedRect(layer.ctx, {
@@ -1603,7 +1946,7 @@
         }
         ctx.drawImage(layer.canvas, 0, 0);
 
-        addVignette(ctx, width, height, palette.ink, 0.26 + currentState.advanced.vignette * 0.38);
+        addVignette(ctx, width, height, palette.ink, 0.26 + (currentState.advanced.vignette ?? 0.56) * 0.38);
       }
 
       function drawOrganicGeometry(ctx, width, height, palette, currentState, rng) {
@@ -1653,7 +1996,7 @@
 
       function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
         const layer = createLayer(width, height);
-        const blur = width * (0.034 + currentState.advanced.bandSoftness * 0.09 + currentState.advanced.glowRadius * 0.04);
+        const blur = width * (0.034 + (currentState.advanced.bandSoftness ?? 0.56) * 0.09 + currentState.advanced.glowRadius * 0.04);
         const fieldCount = 2 + Math.round(currentState.density * 2);
 
         paintSoftEllipse(layer.ctx, {
@@ -1716,16 +2059,15 @@
         }
 
         ctx.drawImage(layer.canvas, 0, 0);
-        drawReededGlassPattern(ctx, width, height, palette, currentState.advanced.ridgeDensity, currentState.advanced.ridgeContrast);
         addVignette(ctx, width, height, palette.ink, 0.14 + currentState.advanced.ridgeContrast * 0.12);
       }
 
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        if (currentState.preset === "minimal-grid") {
+        if (currentState.shapeMode === "minimal-form" && currentState.backgroundMode !== "deep-cold" && currentState.textureMode !== "honeycomb") {
           paintSoftEllipse(ctx, {
-            x: width * (0.28 + currentState.advanced.lightDrift * 0.22),
+            x: width * (0.28 + (currentState.advanced.lightDrift ?? 0.5) * 0.22),
             y: height * 0.18,
             rx: width * 0.16,
             ry: height * 0.08,
@@ -1733,7 +2075,7 @@
             blur: width * 0.04,
           });
         }
-        if (currentState.preset === "bold-blocks") {
+        if (currentState.shapeMode === "soft-blocks") {
           paintSoftRoundedRect(ctx, {
             x: width * 0.54,
             y: height * 0.16,
@@ -1745,7 +2087,7 @@
             blur: width * 0.025,
           });
         }
-        if (currentState.preset === "tech-texture") {
+        if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "honeycomb") {
           const gradient = ctx.createLinearGradient(width * 0.14, height * 0.76, width * 0.76, height * 0.24);
           gradient.addColorStop(0, hexToRgba(palette.surface, 0));
           gradient.addColorStop(0.5, hexToRgba(palette.accent, 0.2));
@@ -1766,7 +2108,7 @@
             blur: width * 0.055,
           });
         }
-        if (currentState.preset === "organic-flow") {
+        if (currentState.shapeMode === "flow-ribbons") {
           ctx.fillStyle = hexToRgba(palette.accentSoft, 0.1 + currentState.advanced.veil * 0.18);
           for (let i = 0; i < 3; i += 1) {
             const x = width * (0.12 + rng() * 0.6);
@@ -1778,7 +2120,7 @@
             ctx.fill();
           }
         }
-        if (currentState.preset === "reeded-glass") {
+        if (currentState.shapeMode === "reeded-column") {
           paintSoftRoundedRect(ctx, {
             x: width * 0.54,
             y: height * 0.08,
@@ -1804,10 +2146,12 @@
 
       function drawTextureLayer(ctx, width, height, palette, currentState, rng) {
         const fineGrain = currentState.advanced.grainFine ?? 0.14;
-        const noiseIntensity = currentState.preset === "tech-texture"
+        const noiseIntensity = currentState.textureMode === "honeycomb"
           ? 0.09 + currentState.complexity * 0.04
-          : currentState.preset === "minimal-grid"
+          : currentState.textureMode === "light-grid"
             ? 0.05 + fineGrain * 0.35
+            : currentState.textureMode === "prism-glass"
+              ? 0.06 + fineGrain * 0.3 + currentState.complexity * 0.03
             : 0.05 + currentState.complexity * 0.05 + currentState.density * 0.03;
 
         if (noiseIntensity > 0.01) {
@@ -1821,7 +2165,13 @@
           }
         }
 
-        if (currentState.preset === "tech-texture") {
+        if (currentState.textureMode === "light-grid") {
+          const patternAlpha = 0.014 + (currentState.advanced.patternStrength ?? 0.26) * 0.075;
+          const spacing = width * (0.06 + (1 - currentState.density) * 0.06);
+          drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
+        }
+
+        if (currentState.textureMode === "honeycomb") {
           const step = 7 + currentState.advanced.patternStrength * 12;
           ctx.strokeStyle = hexToRgba(palette.accentSoft, 0.06);
           ctx.lineWidth = 1;
@@ -1833,7 +2183,7 @@
           drawHexPattern(ctx, width, height, side, palette.ink, 0.14 + currentState.advanced.patternStrength * 0.18);
         }
 
-        if (currentState.preset === "reeded-glass") {
+        if (currentState.textureMode === "prism-glass") {
           drawPrismTexture(ctx, width, height, palette, currentState.advanced.ridgeDensity, currentState.advanced.prismStrength);
           const step = width * (0.018 + (1 - currentState.advanced.ridgeDensity) * 0.03);
           ctx.save();
@@ -1857,35 +2207,50 @@
         ctx.closePath();
       }
 
+      function drawBackgroundMode(ctx, width, height, palette, currentState, rng) {
+        drawBackground(ctx, width, height, palette, currentState, rng);
+      }
+
+      function drawShapeMode(ctx, width, height, palette, currentState, rng) {
+        switch (currentState.shapeMode) {
+          case "minimal-form":
+            if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "honeycomb") {
+              drawTechGeometry(ctx, width, height, palette, currentState, rng);
+            } else {
+              drawMinimalGeometry(ctx, width, height, palette, currentState, rng);
+            }
+            break;
+          case "soft-blocks":
+            drawBlockGeometry(ctx, width, height, palette, currentState, rng);
+            break;
+          case "flow-ribbons":
+            drawOrganicGeometry(ctx, width, height, palette, currentState, rng);
+            break;
+          case "reeded-column":
+            drawReededGlassGeometry(ctx, width, height, palette, currentState, rng);
+            break;
+          default:
+            drawMinimalGeometry(ctx, width, height, palette, currentState, rng);
+        }
+      }
+
+      function drawAccentMode(ctx, width, height, palette, currentState, rng) {
+        drawAccentLayer(ctx, width, height, palette, currentState, rng);
+      }
+
+      function drawTextureMode(ctx, width, height, palette, currentState, rng) {
+        drawTextureLayer(ctx, width, height, palette, currentState, rng);
+      }
+
       function renderArtwork(ctx, outputWidth, outputHeight, currentState) {
         const palette = palettes[currentState.palette];
         const rng = makeRng(currentState.seed);
 
         ctx.clearRect(0, 0, outputWidth, outputHeight);
-        drawBackground(ctx, outputWidth, outputHeight, palette, currentState.preset, currentState, rng);
-
-        switch (currentState.preset) {
-          case "minimal-grid":
-            drawMinimalGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-            break;
-          case "bold-blocks":
-            drawBlockGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-            break;
-          case "tech-texture":
-            drawTechGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-            break;
-          case "organic-flow":
-            drawOrganicGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-            break;
-          case "reeded-glass":
-            drawReededGlassGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-            break;
-          default:
-            drawMinimalGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
-        }
-
-        drawAccentLayer(ctx, outputWidth, outputHeight, palette, currentState, rng);
-        drawTextureLayer(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawBackgroundMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawShapeMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
       }
 
       function computePreviewSurface() {
@@ -1932,6 +2297,18 @@
       }
 
       function bindCommonControls() {
+        elements.backgroundModeSelect.addEventListener("change", (event) => {
+          applyModeChange("backgroundMode", event.currentTarget.value);
+        });
+
+        elements.shapeModeSelect.addEventListener("change", (event) => {
+          applyModeChange("shapeMode", event.currentTarget.value);
+        });
+
+        elements.textureModeSelect.addEventListener("change", (event) => {
+          applyModeChange("textureMode", event.currentTarget.value);
+        });
+
         elements.sizePreset.addEventListener("change", (event) => {
           applySizePreset(event.currentTarget.value);
         });
@@ -1974,8 +2351,13 @@
         });
 
         elements.randomizeButton.addEventListener("click", () => {
-          randomizeCurrentPreset();
+          randomizeCurrentComposition();
           setFeedback("已生成一组新的参数组合", "success");
+        });
+
+        elements.randomizeMixButton.addEventListener("click", () => {
+          randomizeMix();
+          setFeedback("已生成一组新的混搭组合", "success");
         });
 
         elements.resetButton.addEventListener("click", () => {
@@ -2076,7 +2458,10 @@
       window.__app = {
         getState: () => JSON.parse(JSON.stringify(state)),
         switchPreset,
+        applyModeChange,
+        randomizeCurrentComposition,
         randomizeCurrentPreset,
+        randomizeMix,
         resetCurrentPreset,
         exportPng,
         getExportStrategy,
