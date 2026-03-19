@@ -686,7 +686,7 @@
         dawn: {
           label: "暮光陶土",
           backgroundA: "#f7ddd2",
-          backgroundB: "#f5f0ea",
+          backgroundB: "#eee5da",
           surface: "#b7d6f2",
           ink: "#1f3e6d",
           accent: "#ee7f63",
@@ -695,7 +695,7 @@
         harbor: {
           label: "港口薄雾",
           backgroundA: "#edf2ef",
-          backgroundB: "#dfe8e3",
+          backgroundB: "#d6e0da",
           surface: "#88b6c4",
           ink: "#234256",
           accent: "#d99e73",
@@ -722,7 +722,7 @@
         mineral: {
           label: "矿物砂红",
           backgroundA: "#f7e7db",
-          backgroundB: "#e9d4c8",
+          backgroundB: "#dfc9bc",
           surface: "#7fb4e8",
           ink: "#3d261f",
           accent: "#d4573e",
@@ -1363,7 +1363,7 @@
           height: height * 0.48,
           radius: width * 0.14,
           rotation: -0.1,
-          color: hexToRgba(palette.ink, 0.44),
+          color: hexToRgba(palette.ink, 0.52),
           blur: blur * 0.24,
         });
         paintSoftEllipse(layer.ctx, {
@@ -1400,7 +1400,7 @@
             rx: width * (0.08 + rng() * 0.12),
             ry: height * (0.08 + rng() * 0.14),
             rotation: rng() * Math.PI,
-            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.28),
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accentSoft, 0.32),
             blur: blur * (0.7 + rng() * 0.35),
           });
         }
@@ -1409,6 +1409,7 @@
         const patternAlpha = 0.014 + currentState.advanced.patternStrength * 0.075;
         const spacing = width * (0.06 + (1 - currentState.density) * 0.06);
         drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
+        addVignette(ctx, width, height, palette.ink, 0.05 + currentState.complexity * 0.04);
       }
 
       function drawBlockGeometry(ctx, width, height, palette, currentState, rng) {
@@ -1422,7 +1423,7 @@
           height: height * 0.24,
           radius: width * 0.12,
           rotation: -0.08,
-          color: hexToRgba(palette.accent, 0.82),
+          color: hexToRgba(palette.accent, 0.88),
           blur,
         });
         paintSoftEllipse(layer.ctx, {
@@ -1449,12 +1450,12 @@
             height: height * (0.08 + rng() * 0.12),
             radius: width * (0.08 + currentState.advanced.softness * 0.1),
             rotation: (rng() - 0.5) * currentState.advanced.offsetPull,
-            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.26 + currentState.advanced.tonalSplit * 0.12),
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.32 + currentState.advanced.tonalSplit * 0.14),
             blur: blur * (0.6 + rng() * 0.5),
           });
         }
         ctx.drawImage(layer.canvas, 0, 0);
-        addVignette(ctx, width, height, palette.ink, 0.06 + currentState.advanced.tonalSplit * 0.12);
+        addVignette(ctx, width, height, palette.ink, 0.09 + currentState.advanced.tonalSplit * 0.14);
       }
 
       function drawTechGeometry(ctx, width, height, palette, currentState, rng) {
@@ -1466,7 +1467,7 @@
           y: height * 0.34,
           rx: width * 0.26,
           ry: height * 0.3,
-          color: hexToRgba(palette.surface, 0.92),
+          color: hexToRgba(palette.surface, 0.96),
           blur,
         });
         paintSoftEllipse(layer.ctx, {
@@ -1497,7 +1498,7 @@
         }
         ctx.drawImage(layer.canvas, 0, 0);
 
-        addVignette(ctx, width, height, palette.ink, 0.22 + currentState.advanced.vignette * 0.36);
+        addVignette(ctx, width, height, palette.ink, 0.26 + currentState.advanced.vignette * 0.38);
       }
 
       function drawOrganicGeometry(ctx, width, height, palette, currentState, rng) {
@@ -1517,7 +1518,7 @@
             });
           }
           paintSoftRibbon(layer.ctx, points, {
-            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.5),
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.accent, 0.56),
             lineWidth: width * (0.09 + currentState.complexity * 0.06),
             blur: blur * (0.85 + currentState.advanced.glowRadius * 0.3),
           });
@@ -1542,6 +1543,7 @@
           color: hexToRgba(palette.accentSoft, 0.12 + currentState.advanced.veil * 0.16),
           blur: blur * 0.6,
         });
+        addVignette(ctx, width, height, palette.ink, 0.08 + currentState.advanced.stretch * 0.06);
       }
 
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
@@ -1553,7 +1555,7 @@
             y: height * 0.18,
             rx: width * 0.16,
             ry: height * 0.08,
-            color: hexToRgba(palette.accent, 0.18),
+            color: hexToRgba(palette.accent, 0.24),
             blur: width * 0.04,
           });
         }
@@ -1565,14 +1567,14 @@
             height: height * 0.18,
             radius: width * 0.08,
             rotation: 0.22,
-            color: hexToRgba(palette.ink, 0.18 + currentState.advanced.tonalSplit * 0.08),
+            color: hexToRgba(palette.ink, 0.24 + currentState.advanced.tonalSplit * 0.1),
             blur: width * 0.025,
           });
         }
         if (currentState.preset === "tech-texture") {
           const gradient = ctx.createLinearGradient(width * 0.14, height * 0.76, width * 0.76, height * 0.24);
           gradient.addColorStop(0, hexToRgba(palette.surface, 0));
-          gradient.addColorStop(0.5, hexToRgba(palette.accent, 0.14));
+          gradient.addColorStop(0.5, hexToRgba(palette.accent, 0.2));
           gradient.addColorStop(1, hexToRgba(palette.surface, 0));
           ctx.strokeStyle = gradient;
           ctx.lineWidth = 5 + currentState.advanced.glowRadius * 10;
@@ -1580,6 +1582,15 @@
           ctx.moveTo(width * 0.18, height * 0.82);
           ctx.lineTo(width * 0.74, height * 0.28);
           ctx.stroke();
+          paintSoftEllipse(ctx, {
+            x: width * 0.54,
+            y: height * 0.52,
+            rx: width * 0.16,
+            ry: height * 0.2,
+            rotation: -0.28,
+            color: hexToRgba(palette.ink, 0.18),
+            blur: width * 0.055,
+          });
         }
         if (currentState.preset === "organic-flow") {
           ctx.fillStyle = hexToRgba(palette.accentSoft, 0.1 + currentState.advanced.veil * 0.18);
@@ -1617,14 +1628,14 @@
 
         if (currentState.preset === "tech-texture") {
           const step = 7 + currentState.advanced.patternStrength * 12;
-          ctx.strokeStyle = hexToRgba(palette.accentSoft, 0.04);
+          ctx.strokeStyle = hexToRgba(palette.accentSoft, 0.06);
           ctx.lineWidth = 1;
           for (let y = 0; y < height; y += step) {
             line(ctx, 0, y, width, y);
           }
           const side = width * (0.012 + currentState.advanced.cellScale * 0.02);
-          drawHexPattern(ctx, width, height, side, palette.accentSoft, 0.04 + currentState.advanced.patternStrength * 0.07);
-          drawHexPattern(ctx, width, height, side, palette.ink, 0.1 + currentState.advanced.patternStrength * 0.16);
+          drawHexPattern(ctx, width, height, side, palette.accentSoft, 0.06 + currentState.advanced.patternStrength * 0.08);
+          drawHexPattern(ctx, width, height, side, palette.ink, 0.14 + currentState.advanced.patternStrength * 0.18);
         }
       }
 
