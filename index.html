@@ -124,15 +124,6 @@
         gap: 0.45rem;
       }
 
-      .hero-mark {
-        margin: 0;
-        color: var(--text-strong);
-        font-size: clamp(2.55rem, 4vw, 4.25rem);
-        line-height: 0.92;
-        letter-spacing: -0.045em;
-        font-weight: 600;
-      }
-
       h1 {
         margin: 0;
         max-width: 26ch;
@@ -490,10 +481,6 @@
           padding: 1.35rem;
         }
 
-        .hero-mark {
-          font-size: clamp(2.3rem, 4vw, 3.4rem);
-        }
-
         .preview-panel {
           padding: 0.9rem;
         }
@@ -524,10 +511,6 @@
           height: auto;
           min-height: 58svh;
           padding: 0.8rem;
-        }
-
-        .hero-mark {
-          font-size: clamp(2.3rem, 9vw, 3.4rem);
         }
 
         .preview-stage {
@@ -574,7 +557,6 @@
     <main class="app-shell">
       <aside class="control-panel">
         <header class="panel-head">
-          <p class="hero-mark">Wallpaper Maker</p>
           <h1>参数化生成手机壁纸</h1>
           <div id="feedback" class="feedback" aria-live="polite"></div>
         </header>
@@ -728,6 +710,15 @@
           accent: "#d4573e",
           accentSoft: "#f1ddd1",
         },
+        amberglass: {
+          label: "橘雾冷杉",
+          backgroundA: "#cf3e3c",
+          backgroundB: "#315246",
+          surface: "#f4d2a0",
+          ink: "#1f352d",
+          accent: "#ff7a3f",
+          accentSoft: "#c1d5bd",
+        },
       };
 
       const presetDefinitions = {
@@ -867,6 +858,41 @@
                 { key: "drift", label: "漂移幅度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
                 { key: "stretch", label: "流向拉伸", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
                 { key: "veil", label: "纱幕透明度", min: 0.05, max: 0.72, step: 0.01, format: "percent" },
+              ],
+            },
+          ],
+        },
+        "reeded-glass": {
+          label: "长虹玻璃感",
+          note: "像隔着带棱线的玻璃看颜色，既有竖向秩序，也有一点折射和雾感。",
+          defaults: {
+            palette: "amberglass",
+            density: 0.54,
+            complexity: 0.66,
+            advanced: {
+              ridgeDensity: 0.48,
+              ridgeContrast: 0.68,
+              glowRadius: 0.62,
+              prismStrength: 0.24,
+              bandSoftness: 0.56,
+              grainFine: 0.12,
+            },
+          },
+          groups: [
+            {
+              title: "玻璃",
+              controls: [
+                { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
+                { key: "ridgeContrast", label: "折射强度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+                { key: "glowRadius", label: "光晕半径", min: 0.08, max: 0.9, step: 0.01, format: "percent" },
+              ],
+            },
+            {
+              title: "质感",
+              controls: [
+                { key: "prismStrength", label: "玻璃肌理", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
+                { key: "bandSoftness", label: "雾化程度", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
+                { key: "grainFine", label: "颗粒细度", min: 0, max: 0.4, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1302,6 +1328,64 @@
         ctx.restore();
       }
 
+      function drawReededGlassPattern(ctx, width, height, palette, density, contrast) {
+        const step = width * (0.018 + (1 - density) * 0.028);
+        const ridgeWidth = step * 0.92;
+        ctx.save();
+        ctx.globalCompositeOperation = "soft-light";
+        for (let x = -ridgeWidth; x < width + ridgeWidth; x += step) {
+          const gradient = ctx.createLinearGradient(x, 0, x + ridgeWidth, 0);
+          gradient.addColorStop(0, hexToRgba(palette.ink, 0.09 + contrast * 0.11));
+          gradient.addColorStop(0.16, hexToRgba(palette.surface, 0.05 + contrast * 0.05));
+          gradient.addColorStop(0.38, `rgba(255, 255, 255, ${0.05 + contrast * 0.1})`);
+          gradient.addColorStop(0.52, `rgba(255, 255, 255, ${0.12 + contrast * 0.18})`);
+          gradient.addColorStop(0.7, hexToRgba(palette.accentSoft, 0.06 + contrast * 0.07));
+          gradient.addColorStop(1, hexToRgba(palette.ink, 0.04 + contrast * 0.06));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, 0, ridgeWidth, height);
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.strokeStyle = hexToRgba(palette.ink, 0.04 + contrast * 0.11);
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= width; x += step) {
+          line(ctx, x, 0, x, height);
+        }
+        ctx.restore();
+      }
+
+      function drawPrismTexture(ctx, width, height, palette, density, strength) {
+        const stepX = width * (0.016 + (1 - density) * 0.022);
+        const stepY = width * 0.026;
+        const rx = stepX * (0.18 + strength * 0.12);
+        const ry = stepY * (0.12 + strength * 0.08);
+        ctx.save();
+        for (let row = -1; row < Math.ceil(height / stepY) + 2; row += 1) {
+          const y = row * stepY;
+          const offset = row % 2 === 0 ? 0 : stepX * 0.5;
+          for (let x = -stepX; x < width + stepX; x += stepX) {
+            ctx.beginPath();
+            ctx.ellipse(x + offset, y, rx, ry, 0, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(palette.accent, 0.015 + strength * 0.04);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(x + offset, y, rx * 0.46, ry * 0.46, 0, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.012 + strength * 0.03})`;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(x + offset, y - ry * 1.2);
+            ctx.lineTo(x + offset + rx * 1.15, y);
+            ctx.lineTo(x + offset, y + ry * 1.2);
+            ctx.lineTo(x + offset - rx * 1.15, y);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.006 + strength * 0.018})`;
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
       function addVignette(ctx, width, height, color, strength) {
         const vignette = ctx.createRadialGradient(width * 0.5, height * 0.5, width * 0.1, width * 0.5, height * 0.5, width * 0.82);
         vignette.addColorStop(0, hexToRgba(color, 0));
@@ -1336,6 +1420,27 @@
           ctx.fillStyle = glow;
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = hexToRgba(palette.ink, 0.12);
+          ctx.fillRect(0, 0, width, height);
+        } else if (preset === "reeded-glass") {
+          const warmGlow = ctx.createRadialGradient(width * 0.24, height * 0.18, 0, width * 0.24, height * 0.18, width * 0.74);
+          warmGlow.addColorStop(0, hexToRgba(palette.accent, 0.3));
+          warmGlow.addColorStop(1, hexToRgba(palette.accent, 0));
+          ctx.fillStyle = warmGlow;
+          ctx.fillRect(0, 0, width, height);
+
+          const coolGlow = ctx.createRadialGradient(width * 0.72, height * 0.84, 0, width * 0.72, height * 0.84, width * 0.78);
+          coolGlow.addColorStop(0, hexToRgba(palette.accentSoft, 0.24));
+          coolGlow.addColorStop(1, hexToRgba(palette.accentSoft, 0));
+          ctx.fillStyle = coolGlow;
+          ctx.fillRect(0, 0, width, height);
+
+          const coreGlow = ctx.createRadialGradient(width * 0.6, height * 0.5, 0, width * 0.6, height * 0.5, width * 0.46);
+          coreGlow.addColorStop(0, hexToRgba(palette.surface, 0.32));
+          coreGlow.addColorStop(1, hexToRgba(palette.surface, 0));
+          ctx.fillStyle = coreGlow;
+          ctx.fillRect(0, 0, width, height);
+
+          ctx.fillStyle = hexToRgba(palette.ink, 0.06);
           ctx.fillRect(0, 0, width, height);
         } else {
           ctx.fillStyle = hexToRgba(palette.ink, 0.035);
@@ -1546,6 +1651,75 @@
         addVignette(ctx, width, height, palette.ink, 0.08 + currentState.advanced.stretch * 0.06);
       }
 
+      function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
+        const layer = createLayer(width, height);
+        const blur = width * (0.034 + currentState.advanced.bandSoftness * 0.09 + currentState.advanced.glowRadius * 0.04);
+        const fieldCount = 2 + Math.round(currentState.density * 2);
+
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.22,
+          y: height * 0.12,
+          rx: width * 0.42,
+          ry: height * 0.26,
+          rotation: -0.14,
+          color: hexToRgba(palette.accent, 0.98),
+          blur: blur * 1.1,
+        });
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.62,
+          y: height * 0.5,
+          rx: width * 0.28,
+          ry: height * 0.2,
+          rotation: -0.18,
+          color: hexToRgba(palette.surface, 0.82),
+          blur: blur * 0.88,
+        });
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.22,
+          y: height * 0.74,
+          rx: width * 0.28,
+          ry: height * 0.26,
+          rotation: 0.12,
+          color: hexToRgba(palette.accentSoft, 0.52),
+          blur: blur * 0.92,
+        });
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.62,
+          y: height * 0.94,
+          rx: width * 0.48,
+          ry: height * 0.32,
+          rotation: -0.08,
+          color: hexToRgba(palette.ink, 0.82),
+          blur: blur * 1.05,
+        });
+        paintSoftRoundedRect(layer.ctx, {
+          x: width * 0.48,
+          y: height * 0.16,
+          width: width * 0.18,
+          height: height * 0.72,
+          radius: width * 0.09,
+          rotation: 0.02,
+          color: `rgba(255, 255, 255, ${0.11 + currentState.advanced.glowRadius * 0.08})`,
+          blur: blur * 0.64,
+        });
+
+        for (let index = 0; index < fieldCount; index += 1) {
+          paintSoftEllipse(layer.ctx, {
+            x: width * (0.16 + rng() * 0.66),
+            y: height * (0.12 + rng() * 0.72),
+            rx: width * (0.12 + rng() * 0.14),
+            ry: height * (0.08 + rng() * 0.12),
+            rotation: (rng() - 0.5) * 0.8,
+            color: hexToRgba(index % 2 === 0 ? palette.accent : palette.accentSoft, 0.22 + currentState.advanced.glowRadius * 0.14),
+            blur: blur * (0.74 + rng() * 0.42),
+          });
+        }
+
+        ctx.drawImage(layer.canvas, 0, 0);
+        drawReededGlassPattern(ctx, width, height, palette, currentState.advanced.ridgeDensity, currentState.advanced.ridgeContrast);
+        addVignette(ctx, width, height, palette.ink, 0.14 + currentState.advanced.ridgeContrast * 0.12);
+      }
+
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
@@ -1604,6 +1778,27 @@
             ctx.fill();
           }
         }
+        if (currentState.preset === "reeded-glass") {
+          paintSoftRoundedRect(ctx, {
+            x: width * 0.54,
+            y: height * 0.08,
+            width: width * 0.1,
+            height: height * 0.78,
+            radius: width * 0.05,
+            rotation: 0,
+            color: `rgba(255, 255, 255, ${0.09 + currentState.advanced.ridgeContrast * 0.08})`,
+            blur: width * 0.024,
+          });
+          paintSoftEllipse(ctx, {
+            x: width * 0.34,
+            y: height * 0.52,
+            rx: width * 0.22,
+            ry: height * 0.18,
+            rotation: -0.24,
+            color: hexToRgba(palette.surface, 0.06 + currentState.advanced.glowRadius * 0.08),
+            blur: width * 0.05,
+          });
+        }
         ctx.restore();
       }
 
@@ -1637,6 +1832,18 @@
           drawHexPattern(ctx, width, height, side, palette.accentSoft, 0.06 + currentState.advanced.patternStrength * 0.08);
           drawHexPattern(ctx, width, height, side, palette.ink, 0.14 + currentState.advanced.patternStrength * 0.18);
         }
+
+        if (currentState.preset === "reeded-glass") {
+          drawPrismTexture(ctx, width, height, palette, currentState.advanced.ridgeDensity, currentState.advanced.prismStrength);
+          const step = width * (0.018 + (1 - currentState.advanced.ridgeDensity) * 0.03);
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.018 + currentState.advanced.ridgeContrast * 0.028})`;
+          ctx.lineWidth = 1;
+          for (let x = step * 0.5; x < width; x += step) {
+            line(ctx, x, 0, x, height);
+          }
+          ctx.restore();
+        }
       }
 
       function roundedRect(ctx, x, y, width, height, radius) {
@@ -1669,6 +1876,9 @@
             break;
           case "organic-flow":
             drawOrganicGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
+            break;
+          case "reeded-glass":
+            drawReededGlassGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
             break;
           default:
             drawMinimalGeometry(ctx, outputWidth, outputHeight, palette, currentState, rng);
