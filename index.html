@@ -1631,6 +1631,28 @@
         return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
       }
 
+      function hexToUnitRgb(hex) {
+        const clean = hex.replace("#", "");
+        const normalized = clean.length === 3
+          ? clean.split("").map((char) => char + char).join("")
+          : clean;
+        return [
+          Number.parseInt(normalized.slice(0, 2), 16) / 255,
+          Number.parseInt(normalized.slice(2, 4), 16) / 255,
+          Number.parseInt(normalized.slice(4, 6), 16) / 255,
+        ];
+      }
+
+      const reededShaderState = {
+        renderer: null,
+        failed: false,
+        reason: "",
+      };
+
+      const reededShaderDebug = {
+        forceFallback: false,
+      };
+
       function createLayer(width, height) {
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -1639,6 +1661,267 @@
           canvas,
           ctx: canvas.getContext("2d", { alpha: true }),
         };
+      }
+
+      function createShader(gl, type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const info = gl.getShaderInfoLog(shader) || "shader compile failed";
+          gl.deleteShader(shader);
+          throw new Error(info);
+        }
+        return shader;
+      }
+
+      function createProgram(gl, vertexSource, fragmentSource) {
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          const info = gl.getProgramInfoLog(program) || "program link failed";
+          gl.deleteProgram(program);
+          gl.deleteShader(vertexShader);
+          gl.deleteShader(fragmentShader);
+          throw new Error(info);
+        }
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
+        return program;
+      }
+
+      function createReededShaderRenderer() {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl", {
+          alpha: false,
+          antialias: false,
+          depth: false,
+          preserveDrawingBuffer: true,
+          premultipliedAlpha: false,
+          stencil: false,
+        });
+        if (!gl) {
+          throw new Error("webgl unavailable");
+        }
+
+        const vertexSource = `
+          attribute vec2 a_position;
+          varying vec2 v_uv;
+
+          void main() {
+            v_uv = a_position * 0.5 + 0.5;
+            gl_Position = vec4(a_position, 0.0, 1.0);
+          }
+        `;
+
+        const fragmentSource = `
+          precision highp float;
+
+          varying vec2 v_uv;
+
+          uniform sampler2D u_source;
+          uniform vec2 u_resolution;
+          uniform float u_ridgeDensity;
+          uniform float u_ridgeBreath;
+          uniform float u_refractionField;
+          uniform float u_focusField;
+          uniform float u_fieldBlend;
+          uniform vec2 u_phase;
+          uniform float u_focusCount;
+          uniform vec4 u_focusZones[3];
+          uniform vec3 u_surfaceColor;
+          uniform vec3 u_accentColor;
+          uniform vec3 u_inkColor;
+
+          float gaussian(float distanceValue, float spread) {
+            float safeSpread = max(spread, 0.001);
+            return exp(-(distanceValue * distanceValue) / (2.0 * safeSpread * safeSpread));
+          }
+
+          void main() {
+            vec2 uv = v_uv;
+            float density = clamp(u_ridgeDensity, 0.0, 1.0);
+            float breath = clamp(u_ridgeBreath, 0.0, 1.0);
+            float refraction = clamp(u_refractionField, 0.0, 1.0);
+            float focusStrength = clamp(u_focusField, 0.0, 1.0);
+            float fieldBlend = clamp(u_fieldBlend, 0.0, 1.0);
+
+            float freq = mix(26.0, 96.0, density);
+            float breathingOffset = sin(uv.y * (3.6 + breath * 3.8) + u_phase.x) * (0.008 + breath * 0.012);
+            float ridgePrimary = sin((uv.x + breathingOffset) * freq + u_phase.y);
+            float ridgeSecondary = sin((uv.x * 0.62 - uv.y * 0.16) * freq * (0.46 + breath * 0.14) - u_phase.x * 0.7);
+            float ridgeMix = ridgePrimary * 0.68 + ridgeSecondary * 0.32;
+
+            float focusMask = 0.0;
+            float focusDrift = 0.0;
+            for (int i = 0; i < 3; i += 1) {
+              float enabled = step(float(i) + 0.5, u_focusCount);
+              vec4 zone = u_focusZones[i];
+              float zoneX = gaussian(uv.x - zone.x, zone.y * (0.4 + fieldBlend * 0.36));
+              float zoneY = 0.76 + 0.24 * sin(uv.y * 6.28318 + zone.w * 220.0 + u_phase.x);
+              float local = enabled * zoneX * zone.z * zoneY;
+              focusMask += local;
+              focusDrift += local * zone.w;
+            }
+            focusMask = clamp(focusMask, 0.0, 1.35);
+
+            float amplitude = (0.002 + refraction * 0.012) * (0.65 + focusMask * (0.9 + focusStrength * 0.4));
+            float dispX = ridgeMix * amplitude + focusDrift * 0.3;
+            float dispY = sin(uv.x * freq * 0.72 + u_phase.x) * amplitude * (0.22 + fieldBlend * 0.18);
+
+            vec2 sampleUv = clamp(uv + vec2(dispX, dispY), vec2(0.001), vec2(0.999));
+            vec3 sourceColor = texture2D(u_source, sampleUv).rgb;
+
+            float ridgeHighlight = pow(0.5 + 0.5 * cos((uv.x + breathingOffset * 0.2) * freq * 1.08 + u_phase.y * 0.6), 1.6 + (1.0 - fieldBlend) * 1.1);
+            float ridgeShadow = pow(0.5 + 0.5 * sin((uv.x - breathingOffset * 0.4) * freq * 0.94 - u_phase.x), 2.1);
+            float glow = ridgeHighlight * (0.04 + refraction * 0.04) + focusMask * (0.03 + focusStrength * 0.05);
+            float veil = 0.03 + fieldBlend * 0.08 + focusMask * 0.04;
+
+            vec3 tint = mix(u_surfaceColor, u_accentColor, 0.28 + focusMask * 0.2);
+            vec3 color = sourceColor;
+            color += tint * glow;
+            color = mix(color, mix(color, tint, 0.18), veil * 0.45);
+            color -= u_inkColor * ridgeShadow * (0.015 + (1.0 - fieldBlend) * 0.025);
+
+            float contrast = 1.0 + refraction * 0.12 + focusMask * 0.09;
+            color = (color - 0.5) * contrast + 0.5;
+            color = clamp(color, 0.0, 1.0);
+
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `;
+
+        const program = createProgram(gl, vertexSource, fragmentSource);
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+          -1, -1,
+          1, -1,
+          -1, 1,
+          1, 1,
+        ]), gl.STATIC_DRAW);
+
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        const attributeLocation = gl.getAttribLocation(program, "a_position");
+        const uniforms = {
+          source: gl.getUniformLocation(program, "u_source"),
+          resolution: gl.getUniformLocation(program, "u_resolution"),
+          ridgeDensity: gl.getUniformLocation(program, "u_ridgeDensity"),
+          ridgeBreath: gl.getUniformLocation(program, "u_ridgeBreath"),
+          refractionField: gl.getUniformLocation(program, "u_refractionField"),
+          focusField: gl.getUniformLocation(program, "u_focusField"),
+          fieldBlend: gl.getUniformLocation(program, "u_fieldBlend"),
+          phase: gl.getUniformLocation(program, "u_phase"),
+          focusCount: gl.getUniformLocation(program, "u_focusCount"),
+          focusZones: gl.getUniformLocation(program, "u_focusZones[0]"),
+          surfaceColor: gl.getUniformLocation(program, "u_surfaceColor"),
+          accentColor: gl.getUniformLocation(program, "u_accentColor"),
+          inkColor: gl.getUniformLocation(program, "u_inkColor"),
+        };
+
+        const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+        return {
+          canvas,
+          gl,
+          program,
+          buffer,
+          texture,
+          attributeLocation,
+          uniforms,
+          maxTextureSize,
+        };
+      }
+
+      function getReededShaderRenderer() {
+        if (reededShaderState.failed) {
+          return null;
+        }
+        if (reededShaderState.renderer) {
+          return reededShaderState.renderer;
+        }
+        try {
+          reededShaderState.renderer = createReededShaderRenderer();
+          reededShaderState.reason = "";
+        } catch (error) {
+          reededShaderState.failed = true;
+          reededShaderState.reason = error.message;
+          return null;
+        }
+        return reededShaderState.renderer;
+      }
+
+      function renderReededGlassPass(sourceCanvas, targetCtx, width, height, palette, currentState, composition) {
+        if (reededShaderDebug.forceFallback) {
+          return false;
+        }
+
+        const renderer = getReededShaderRenderer();
+        if (!renderer) {
+          return false;
+        }
+
+        if (width > renderer.maxTextureSize || height > renderer.maxTextureSize) {
+          return false;
+        }
+
+        const { canvas, gl, program, buffer, texture, attributeLocation, uniforms } = renderer;
+        canvas.width = width;
+        canvas.height = height;
+        gl.viewport(0, 0, width, height);
+
+        const focusData = new Float32Array(12);
+        composition.focusZones.slice(0, 3).forEach((zone, index) => {
+          const offset = index * 4;
+          focusData[offset] = zone.x / Math.max(width, 1);
+          focusData[offset + 1] = zone.width / Math.max(width, 1);
+          focusData[offset + 2] = zone.intensity;
+          focusData[offset + 3] = zone.drift / Math.max(width, 1);
+        });
+
+        try {
+          gl.useProgram(program);
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.enableVertexAttribArray(attributeLocation);
+          gl.vertexAttribPointer(attributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvas);
+
+          gl.uniform1i(uniforms.source, 0);
+          gl.uniform2f(uniforms.resolution, width, height);
+          gl.uniform1f(uniforms.ridgeDensity, currentState.advanced.ridgeDensity ?? 0.42);
+          gl.uniform1f(uniforms.ridgeBreath, currentState.advanced.ridgeBreath ?? 0.36);
+          gl.uniform1f(uniforms.refractionField, currentState.advanced.refractionField ?? 0.48);
+          gl.uniform1f(uniforms.focusField, currentState.advanced.focusField ?? 0.54);
+          gl.uniform1f(uniforms.fieldBlend, currentState.advanced.fieldBlend ?? 0.5);
+          gl.uniform2f(uniforms.phase, composition.basePhase, composition.refractionPhase);
+          gl.uniform1f(uniforms.focusCount, Math.min(3, composition.focusZones.length));
+          gl.uniform4fv(uniforms.focusZones, focusData);
+          gl.uniform3fv(uniforms.surfaceColor, new Float32Array(hexToUnitRgb(palette.surface)));
+          gl.uniform3fv(uniforms.accentColor, new Float32Array(hexToUnitRgb(palette.accentSoft)));
+          gl.uniform3fv(uniforms.inkColor, new Float32Array(hexToUnitRgb(palette.ink)));
+
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          targetCtx.drawImage(canvas, 0, 0, width, height);
+          return true;
+        } catch (error) {
+          reededShaderState.failed = true;
+          reededShaderState.reason = error.message;
+          return false;
+        }
       }
 
       function paintSoftEllipse(ctx, { x, y, rx, ry, rotation = 0, color, blur = 0, alpha = 1, composite = "source-over" }) {
@@ -2407,6 +2690,10 @@
 
       function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
         const composition = buildReededFieldComposition(width, height, currentState, rng);
+        drawReededGlassField2D(ctx, width, height, palette, currentState, composition);
+      }
+
+      function drawReededGlassField2D(ctx, width, height, palette, currentState, composition) {
         drawReededFieldBase(ctx, width, height, palette, currentState, composition);
         drawReededFieldRefraction(ctx, width, height, palette, currentState, composition);
         drawReededFieldFocus(ctx, width, height, palette, currentState, composition);
@@ -2877,11 +3164,30 @@
         drawTextureLayer(ctx, width, height, palette, currentState, rng);
       }
 
+      function renderReededGlassMode(ctx, width, height, palette, currentState, rng) {
+        const backgroundLayer = createLayer(width, height);
+        drawBackgroundMode(backgroundLayer.ctx, width, height, palette, currentState, rng);
+
+        const composition = buildReededFieldComposition(width, height, currentState, rng);
+        const usedWebgl = renderReededGlassPass(backgroundLayer.canvas, ctx, width, height, palette, currentState, composition);
+
+        if (!usedWebgl) {
+          ctx.drawImage(backgroundLayer.canvas, 0, 0);
+          drawReededGlassField2D(ctx, width, height, palette, currentState, composition);
+        }
+      }
+
       function renderArtwork(ctx, outputWidth, outputHeight, currentState) {
         const palette = palettes[currentState.palette];
         const rng = makeRng(currentState.seed);
 
         ctx.clearRect(0, 0, outputWidth, outputHeight);
+        if (currentState.shapeMode === "reeded-column") {
+          renderReededGlassMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          return;
+        }
         drawBackgroundMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
         drawShapeMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
         drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
@@ -3102,6 +3408,19 @@
         getExportStrategy,
         getCanvasSignature,
         renderPreview,
+      };
+
+      window.__wallpaperDebug = {
+        getReededShaderRenderer,
+        renderReededGlassPass,
+        getReededRendererStatus: () => ({
+          ready: Boolean(reededShaderState.renderer) && !reededShaderState.failed,
+          failed: reededShaderState.failed,
+          reason: reededShaderState.reason,
+        }),
+        setForceReededFallback(value) {
+          reededShaderDebug.forceFallback = Boolean(value);
+        },
       };
 
       initialize();

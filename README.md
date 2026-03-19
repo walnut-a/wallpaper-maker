@@ -107,6 +107,7 @@ GitHub Pages：
 
 - 纯 `HTML + CSS + JavaScript`
 - 使用 `Canvas` 负责预览和导出
+- `长虹玻璃` 会额外走一个全屏 shader 风格 pass，拿不到 `WebGL` 时会自动回退到 `Canvas 2D`
 - 预览和导出走同一套绘制逻辑
 - 支持 `file://` 和普通静态站点环境
 
