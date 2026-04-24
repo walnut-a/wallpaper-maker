@@ -13,10 +13,10 @@
         color-scheme: light;
         --page-bg: #f4efe8;
         --page-tint: #ede6dd;
-        --panel-bg: rgba(250, 246, 241, 0.94);
-        --panel-strong: rgba(255, 252, 247, 0.96);
+        --panel-bg: rgba(250, 247, 242, 0.95);
+        --panel-strong: rgba(255, 253, 249, 0.97);
         --panel-border: rgba(77, 64, 53, 0.12);
-        --preview-shell: rgba(250, 248, 244, 0.96);
+        --preview-shell: rgba(250, 248, 244, 0.9);
         --preview-border: rgba(78, 63, 50, 0.1);
         --text-strong: #2d231c;
         --text-main: #56483d;
@@ -27,12 +27,12 @@
         --accent-strong: #704634;
         --danger: #b4513d;
         --line-strong: rgba(77, 64, 53, 0.18);
-        --shadow-soft: 0 18px 60px rgba(72, 53, 40, 0.08);
-        --shadow-preview: 0 24px 80px rgba(54, 41, 30, 0.12);
-        --radius-xl: 28px;
-        --radius-lg: 22px;
-        --radius-md: 16px;
-        --radius-sm: 12px;
+        --shadow-soft: 0 18px 50px rgba(72, 53, 40, 0.06);
+        --shadow-preview: 0 22px 72px rgba(54, 41, 30, 0.13);
+        --radius-xl: 24px;
+        --radius-lg: 18px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
         --panel-width: min(25rem, 100%);
         --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Baskerville", serif;
         --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
@@ -96,8 +96,8 @@
         position: relative;
         display: flex;
         flex-direction: column;
-        gap: 1.25rem;
-        padding: 1.6rem;
+        gap: 1.05rem;
+        padding: 1.45rem;
         background: linear-gradient(180deg, var(--panel-strong), var(--panel-bg));
         border-right: 1px solid var(--panel-border);
         box-shadow:
@@ -121,17 +121,17 @@
 
       .panel-head {
         display: grid;
-        gap: 0.45rem;
+        gap: 0.35rem;
       }
 
       .panel-head h1 {
         margin: 0;
-        max-width: 26ch;
+        max-width: 17ch;
         color: var(--text-strong);
-        font-size: clamp(2.55rem, 4vw, 4.25rem);
+        font-size: 2.55rem;
         font-weight: 600;
-        line-height: 0.92;
-        letter-spacing: -0.045em;
+        line-height: 0.95;
+        letter-spacing: 0;
       }
 
       .feedback {
@@ -166,7 +166,7 @@
         color: var(--text-muted);
         font-size: 0.73rem;
         font-weight: 700;
-        letter-spacing: 0.18em;
+        letter-spacing: 0;
         text-transform: uppercase;
       }
 
@@ -209,6 +209,73 @@
         color: var(--text-strong);
         font-size: 0.96rem;
         font-weight: 600;
+      }
+
+      .candidate-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding-top: 0.2rem;
+      }
+
+      .candidate-title {
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .candidate-refresh {
+        appearance: none;
+        padding: 0.35rem 0.65rem;
+        border: 1px solid rgba(77, 64, 53, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--text-main);
+        font-size: 0.76rem;
+        cursor: pointer;
+      }
+
+      .candidate-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.55rem;
+      }
+
+      .candidate-option {
+        appearance: none;
+        display: grid;
+        gap: 0.36rem;
+        padding: 0.42rem;
+        border: 1px solid rgba(77, 64, 53, 0.12);
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--text-muted);
+        font-size: 0.68rem;
+        cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+      }
+
+      .candidate-option:hover,
+      .candidate-option:focus-visible {
+        transform: translateY(-1px);
+        border-color: var(--line-strong);
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 10px 22px rgba(77, 61, 47, 0.08);
+        outline: none;
+      }
+
+      .candidate-option canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 9 / 16;
+        border-radius: 0.55rem;
+        background: #e8ddd1;
+      }
+
+      .candidate-option span {
+        display: block;
+        text-align: center;
       }
 
       .field-grid {
@@ -381,7 +448,7 @@
         color: var(--text-strong);
         font-size: 0.8rem;
         font-weight: 600;
-        letter-spacing: 0.02em;
+        letter-spacing: 0;
         text-transform: uppercase;
       }
 
@@ -396,7 +463,9 @@
       .preview-stage {
         position: relative;
         display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
         place-items: center;
+        gap: 0.8rem;
         height: 100%;
         min-height: 0;
         padding: clamp(1rem, 2vw, 2rem);
@@ -428,16 +497,15 @@
       }
 
       .preview-meta {
-        position: absolute;
-        right: clamp(1.1rem, 1.8vw, 1.6rem);
-        bottom: clamp(1.1rem, 1.8vw, 1.6rem);
+        position: static;
+        justify-self: center;
         display: inline-flex;
         align-items: center;
         gap: 0.7rem;
         flex-wrap: wrap;
-        padding: 0.7rem 0.9rem;
+        padding: 0.55rem 0.78rem;
         border-radius: 999px;
-        background: rgba(252, 248, 242, 0.78);
+        background: rgba(252, 248, 242, 0.7);
         border: 1px solid rgba(77, 64, 53, 0.12);
         backdrop-filter: blur(8px);
         color: var(--text-main);
@@ -529,12 +597,10 @@
         }
 
         .panel-head h1 {
-          font-size: clamp(2.3rem, 9vw, 3.4rem);
+          font-size: 2.3rem;
         }
 
         .preview-meta {
-          left: 1rem;
-          right: 1rem;
           justify-content: space-between;
           border-radius: 18px;
         }
@@ -557,13 +623,18 @@
     <main class="app-shell">
       <aside class="control-panel">
         <header class="panel-head">
-          <h1>参数化生成手机壁纸</h1>
+          <h1>手机壁纸生成器</h1>
           <div id="feedback" class="feedback" aria-live="polite"></div>
         </header>
 
         <section class="panel-section" aria-labelledby="preset-heading">
           <h2 id="preset-heading" class="section-title">组合预设</h2>
           <div id="presetGrid" class="preset-grid"></div>
+          <div class="candidate-head">
+            <div class="candidate-title">精选候选</div>
+            <button id="refreshCandidatesButton" class="candidate-refresh" type="button">换一组</button>
+          </div>
+          <div id="candidateStrip" class="candidate-strip" aria-label="精选候选"></div>
         </section>
 
         <section class="panel-section" aria-labelledby="composition-heading">
@@ -1213,6 +1284,8 @@
 
       const elements = {
         presetGrid: document.getElementById("presetGrid"),
+        candidateStrip: document.getElementById("candidateStrip"),
+        refreshCandidatesButton: document.getElementById("refreshCandidatesButton"),
         backgroundModeSelect: document.getElementById("backgroundModeSelect"),
         shapeModeSelect: document.getElementById("shapeModeSelect"),
         textureModeSelect: document.getElementById("textureModeSelect"),
@@ -1308,6 +1381,8 @@
       let lastValidDimensions = { width: state.width, height: state.height };
       let feedbackTimer = 0;
       let renderToken = 0;
+      let candidateNonce = 0;
+      let candidateStates = [];
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
@@ -1544,6 +1619,7 @@
         syncControlValues();
         renderAdvancedControls();
         queueRender();
+        refreshCandidates({ silent: true });
       }
 
       function switchPreset(presetKey) {
@@ -1554,6 +1630,7 @@
         renderAdvancedControls();
         setFeedback(`已切换到${presetDefinitions[presetKey].label}`, "success");
         queueRender();
+        refreshCandidates({ silent: true });
       }
 
       function applySizePreset(value) {
@@ -1612,6 +1689,7 @@
 
       function randomizeCurrentComposition() {
         randomizeCurrentPreset();
+        refreshCandidates({ silent: true });
       }
 
       const mixCompatibility = {
@@ -1678,6 +1756,7 @@
         syncControlValues();
         renderAdvancedControls();
         queueRender();
+        refreshCandidates({ silent: true });
       }
 
       function resetCurrentPreset() {
@@ -1701,7 +1780,90 @@
         syncControlValues();
         renderAdvancedControls();
         queueRender();
+        refreshCandidates({ silent: true });
         setFeedback(state.preset === "custom" ? "当前组合已恢复默认参数" : "当前预设已恢复默认参数", "success");
+      }
+
+      function cloneState(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function jitterControlValue(currentValue, control, rng, amount = 0.24) {
+        const base = Number.isFinite(Number(currentValue))
+          ? Number(currentValue)
+          : (control.min + control.max) / 2;
+        const span = control.max - control.min;
+        return Number(clamp(base + (rng() - 0.5) * span * amount, control.min, control.max).toFixed(2));
+      }
+
+      function createCandidateState(index) {
+        const rng = makeRng(state.seed + candidateNonce * 1009 + (index + 1) * 7919);
+        const candidate = cloneState(state);
+        const groups = getCurrentAdvancedGroups(candidate);
+        const paletteKeys = Object.keys(palettes);
+        const nextAdvanced = { ...candidate.advanced };
+
+        candidate.seed = Math.floor(rng() * 999999999) + 1;
+        candidate.density = Number(clamp(candidate.density + (rng() - 0.5) * 0.18, 0.18, 0.9).toFixed(2));
+        candidate.complexity = Number(clamp(candidate.complexity + (rng() - 0.5) * 0.18, 0.16, 0.92).toFixed(2));
+
+        if (index > 0 && rng() > 0.58) {
+          candidate.palette = paletteKeys[(paletteKeys.indexOf(candidate.palette) + index + 1) % paletteKeys.length];
+        }
+
+        groups.forEach((group) => {
+          group.controls.forEach((control) => {
+            nextAdvanced[control.key] = jitterControlValue(nextAdvanced[control.key], control, rng, index === 0 ? 0.12 : 0.28);
+          });
+        });
+
+        candidate.advanced = nextAdvanced;
+        return candidate;
+      }
+
+      function renderCandidateTile(candidateState, index) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "candidate-option";
+        button.setAttribute("aria-label", `应用候选 ${index + 1}`);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 144;
+        canvas.height = 256;
+        const ctx = canvas.getContext("2d", { alpha: false });
+        renderArtwork(ctx, canvas.width, canvas.height, candidateState);
+
+        const label = document.createElement("span");
+        label.textContent = `方案 ${index + 1}`;
+
+        button.appendChild(canvas);
+        button.appendChild(label);
+        button.addEventListener("click", () => applyCandidate(candidateState));
+        return button;
+      }
+
+      function refreshCandidates({ silent = false } = {}) {
+        candidateNonce += 1;
+        candidateStates = Array.from({ length: 4 }, (_, index) => createCandidateState(index));
+        elements.candidateStrip.innerHTML = "";
+        candidateStates.forEach((candidateState, index) => {
+          elements.candidateStrip.appendChild(renderCandidateTile(candidateState, index));
+        });
+        if (!silent) {
+          setFeedback("精选候选已更新", "success");
+        }
+      }
+
+      function applyCandidate(candidateState) {
+        state = cloneState(candidateState);
+        lastValidDimensions = { width: state.width, height: state.height };
+        updateDerivedSizePreset();
+        syncPresetSelection();
+        syncControlValues();
+        renderAdvancedControls();
+        queueRender();
+        refreshCandidates({ silent: true });
+        setFeedback("已应用候选图", "success");
       }
 
       function line(ctx, x1, y1, x2, y2) {
@@ -2042,6 +2204,25 @@
         ctx.restore();
       }
 
+      function paintCrispRoundedRect(ctx, { x, y, width, height, radius, fill = null, stroke = null, lineWidth = 1, rotation = 0, alpha = 1, composite = "source-over" }) {
+        ctx.save();
+        ctx.globalCompositeOperation = composite;
+        ctx.globalAlpha = alpha;
+        ctx.translate(x + width / 2, y + height / 2);
+        ctx.rotate(rotation);
+        roundedRect(ctx, -width / 2, -height / 2, width, height, radius);
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.lineWidth = lineWidth;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
       function paintSoftRibbon(ctx, points, { color, lineWidth, blur = 0, alpha = 1, composite = "source-over" }) {
         if (points.length < 2) {
           return;
@@ -2302,6 +2483,216 @@
           }
         }
         ctx.restore();
+      }
+
+      function drawFineSurfaceGrain(ctx, width, height, palette, currentState, rng) {
+        const amount = 0.00008 + (currentState.advanced.grainFine ?? 0.16) * 0.00024 + currentState.complexity * 0.00008;
+        const dots = Math.round(width * height * amount);
+        ctx.save();
+        for (let index = 0; index < dots; index += 1) {
+          const alpha = 0.012 + rng() * 0.034;
+          const useLight = rng() > 0.52;
+          ctx.fillStyle = useLight ? `rgba(255, 255, 255, ${alpha})` : hexToRgba(palette.ink, alpha * 0.8);
+          ctx.fillRect(rng() * width, rng() * height, 0.6 + rng() * 1.2, 0.6 + rng() * 1.2);
+        }
+        ctx.restore();
+      }
+
+      function drawDiagonalAtmosphere(ctx, width, height, palette, currentState) {
+        const contrast = currentState.advanced.tonalSplit ?? 0.58;
+        const shade = ctx.createLinearGradient(width * 0.08, height * 0.05, width * 0.92, height * 0.98);
+        shade.addColorStop(0, hexToRgba(palette.ink, 0.02));
+        shade.addColorStop(0.42, hexToRgba(palette.ink, 0.02 + contrast * 0.04));
+        shade.addColorStop(1, hexToRgba(palette.ink, 0.12 + contrast * 0.08));
+        ctx.save();
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = shade;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+
+        const lift = ctx.createLinearGradient(width * 0.08, height * 0.86, width * 0.78, height * 0.1);
+        lift.addColorStop(0, hexToRgba(palette.accent, 0));
+        lift.addColorStop(0.52, `rgba(255, 255, 255, ${0.035 + currentState.advanced.glowRadius * 0.04})`);
+        lift.addColorStop(1, hexToRgba(palette.surface, 0));
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.strokeStyle = lift;
+        ctx.lineWidth = width * (0.012 + currentState.complexity * 0.014);
+        ctx.beginPath();
+        ctx.moveTo(width * 0.06, height * 0.9);
+        ctx.bezierCurveTo(width * 0.3, height * 0.64, width * 0.48, height * 0.34, width * 0.82, height * 0.1);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawMinimalFinishing(ctx, width, height, palette, currentState) {
+        const panelAlpha = 0.08 + currentState.advanced.tonalSplit * 0.08;
+        paintCrispRoundedRect(ctx, {
+          x: width * 0.37,
+          y: height * 0.12,
+          width: width * 0.34,
+          height: height * 0.72,
+          radius: width * 0.16,
+          fill: `rgba(255, 255, 255, ${panelAlpha})`,
+          stroke: hexToRgba(palette.ink, 0.08),
+          lineWidth: Math.max(1, width * 0.002),
+          rotation: -0.04,
+          composite: "soft-light",
+        });
+        paintCrispRoundedRect(ctx, {
+          x: width * 0.52,
+          y: height * 0.42,
+          width: width * 0.25,
+          height: height * 0.28,
+          radius: width * 0.11,
+          fill: hexToRgba(palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.08),
+          stroke: `rgba(255, 255, 255, ${0.06 + currentState.advanced.glowRadius * 0.06})`,
+          lineWidth: Math.max(1, width * 0.002),
+          rotation: -0.06,
+        });
+        ctx.save();
+        ctx.globalCompositeOperation = "multiply";
+        ctx.strokeStyle = hexToRgba(palette.ink, 0.08);
+        ctx.lineWidth = Math.max(1, width * 0.0024);
+        ctx.beginPath();
+        ctx.moveTo(width * 0.42, height * 0.2);
+        ctx.bezierCurveTo(width * 0.54, height * 0.34, width * 0.46, height * 0.62, width * 0.62, height * 0.82);
+        ctx.stroke();
+        ctx.restore();
+        paintSoftEllipse(ctx, {
+          x: width * 0.58,
+          y: height * 0.74,
+          rx: width * 0.18,
+          ry: height * 0.12,
+          rotation: -0.08,
+          color: hexToRgba(palette.ink, 0.09),
+          blur: width * 0.026,
+          composite: "multiply",
+        });
+      }
+
+      function drawFlowFinishing(ctx, width, height, palette, currentState, rng) {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        for (let index = 0; index < 3; index += 1) {
+          const y = height * (0.26 + index * 0.2 + (rng() - 0.5) * 0.04);
+          const gradient = ctx.createLinearGradient(width * 0.08, y, width * 0.9, y + height * 0.24);
+          gradient.addColorStop(0, hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0));
+          gradient.addColorStop(0.5, hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0.16 + currentState.complexity * 0.08));
+          gradient.addColorStop(1, hexToRgba(palette.ink, 0));
+          ctx.globalCompositeOperation = index % 2 === 0 ? "screen" : "multiply";
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = width * (0.014 + currentState.density * 0.012);
+          ctx.beginPath();
+          ctx.moveTo(width * -0.04, y);
+          ctx.bezierCurveTo(width * 0.22, y - height * 0.16, width * 0.44, y + height * 0.18, width * 0.96, y - height * 0.04);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        paintSoftEllipse(ctx, {
+          x: width * 0.42,
+          y: height * 0.66,
+          rx: width * 0.36,
+          ry: height * 0.18,
+          rotation: -0.22,
+          color: hexToRgba(palette.ink, 0.18 + currentState.advanced.tonalSplit * 0.08),
+          blur: width * 0.032,
+          composite: "multiply",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * 0.62,
+          y: height * 0.34,
+          rx: width * 0.26,
+          ry: height * 0.16,
+          rotation: 0.18,
+          color: `rgba(255, 255, 255, ${0.16 + currentState.advanced.glowRadius * 0.08})`,
+          blur: width * 0.03,
+          composite: "screen",
+        });
+
+        ctx.save();
+        ctx.globalCompositeOperation = "multiply";
+        ctx.strokeStyle = hexToRgba(palette.ink, 0.14);
+        ctx.lineWidth = width * 0.018;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(width * 0.02, height * 0.72);
+        ctx.bezierCurveTo(width * 0.24, height * 0.5, width * 0.48, height * 0.86, width * 0.92, height * 0.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawBlockFinishing(ctx, width, height, palette, currentState) {
+        paintSoftEllipse(ctx, {
+          x: width * 0.68,
+          y: height * 0.28,
+          rx: width * 0.2,
+          ry: height * 0.18,
+          rotation: 0.18,
+          color: hexToRgba(palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.06),
+          blur: width * 0.032,
+          composite: "multiply",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * 0.22,
+          y: height * 0.7,
+          rx: width * 0.28,
+          ry: height * 0.12,
+          rotation: -0.18,
+          color: hexToRgba(palette.accent, 0.12 + currentState.advanced.tonalSplit * 0.06),
+          blur: width * 0.028,
+          composite: "screen",
+        });
+        paintCrispRoundedRect(ctx, {
+          x: width * 0.1,
+          y: height * 0.52,
+          width: width * 0.48,
+          height: height * 0.18,
+          radius: width * 0.08,
+          fill: hexToRgba(palette.accent, 0.12),
+          stroke: `rgba(255, 255, 255, ${0.08 + currentState.advanced.glowRadius * 0.08})`,
+          lineWidth: Math.max(1, width * 0.002),
+          rotation: -0.1,
+          composite: "soft-light",
+        });
+        paintCrispRoundedRect(ctx, {
+          x: width * 0.54,
+          y: height * 0.21,
+          width: width * 0.28,
+          height: height * 0.2,
+          radius: width * 0.1,
+          fill: hexToRgba(palette.ink, 0.08),
+          stroke: hexToRgba(palette.surface, 0.18),
+          lineWidth: Math.max(1, width * 0.002),
+          rotation: 0.12,
+        });
+      }
+
+      function drawArtworkFinishingPass(ctx, width, height, palette, currentState, rng) {
+        drawDiagonalAtmosphere(ctx, width, height, palette, currentState);
+
+        if (currentState.shapeMode === "minimal-form") {
+          drawMinimalFinishing(ctx, width, height, palette, currentState);
+        }
+        if (currentState.shapeMode === "soft-blocks") {
+          drawBlockFinishing(ctx, width, height, palette, currentState);
+        }
+        if (currentState.shapeMode === "flow-ribbons" || currentState.shapeMode === "fluid-blobs") {
+          drawFlowFinishing(ctx, width, height, palette, currentState, rng);
+        }
+
+        const edge = ctx.createRadialGradient(width * 0.52, height * 0.45, width * 0.08, width * 0.52, height * 0.45, width * 0.86);
+        edge.addColorStop(0, hexToRgba(palette.ink, 0));
+        edge.addColorStop(1, hexToRgba(palette.ink, 0.05 + currentState.complexity * 0.05));
+        ctx.save();
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = edge;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+
+        drawFineSurfaceGrain(ctx, width, height, palette, currentState, rng);
       }
 
       function getWarpAngleRadians(currentState) {
@@ -3581,12 +3972,14 @@
           renderReededGlassMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
           drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
           drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          drawArtworkFinishingPass(ctx, outputWidth, outputHeight, palette, currentState, rng);
           return;
         }
         drawBackgroundMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
         drawShapeMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
         drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
         drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+        drawArtworkFinishingPass(ctx, outputWidth, outputHeight, palette, currentState, rng);
       }
 
       function computePreviewSurface() {
@@ -3652,6 +4045,7 @@
         elements.paletteSelect.addEventListener("change", (event) => {
           state.palette = event.currentTarget.value;
           queueRender();
+          refreshCandidates({ silent: true });
         });
 
         elements.densityInput.addEventListener("input", (event) => {
@@ -3684,6 +4078,7 @@
           state.seed = nextSeed();
           syncControlValues();
           queueRender();
+          refreshCandidates({ silent: true });
         });
 
         elements.randomizeButton.addEventListener("click", () => {
@@ -3702,6 +4097,10 @@
 
         elements.exportButton.addEventListener("click", () => {
           void exportPng();
+        });
+
+        elements.refreshCandidatesButton.addEventListener("click", () => {
+          refreshCandidates();
         });
 
         window.addEventListener("resize", queueRender);
@@ -3773,6 +4172,7 @@
         syncControlValues();
         renderAdvancedControls();
         renderPreview();
+        refreshCandidates({ silent: true });
       }
 
       function getCanvasSignature() {
@@ -3799,6 +4199,8 @@
         randomizeCurrentPreset,
         randomizeMix,
         resetCurrentPreset,
+        refreshCandidates,
+        applyCandidate,
         exportPng,
         getExportStrategy,
         getCanvasSignature,
