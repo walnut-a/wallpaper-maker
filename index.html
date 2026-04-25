@@ -993,6 +993,7 @@
             refractionField: 0.48,
             focusField: 0.54,
             fieldBlend: 0.5,
+            glassDepth: 0.58,
           },
           groups: [
             {
@@ -1003,6 +1004,7 @@
                 { key: "refractionField", label: "全局折射", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
                 { key: "focusField", label: "局部增强", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
                 { key: "fieldBlend", label: "雾场融合", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "glassDepth", label: "玻璃厚度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1239,14 +1241,15 @@
             complexity: 0.66,
             advanced: {
               softness: 0.5,
-              ridgeDensity: 0.42,
-              ridgeBreath: 0.36,
-              refractionField: 0.48,
-              focusField: 0.54,
-              fieldBlend: 0.5,
+              ridgeDensity: 0.32,
+              ridgeBreath: 0.46,
+              refractionField: 0.62,
+              focusField: 0.6,
+              fieldBlend: 0.58,
+              glassDepth: 0.72,
               glowRadius: 0.62,
               tonalSplit: 0.58,
-              prismStrength: 0.24,
+              prismStrength: 0.22,
               bandSoftness: 0.56,
               grainFine: 0.12,
             },
@@ -1983,6 +1986,7 @@
           uniform float u_refractionField;
           uniform float u_focusField;
           uniform float u_fieldBlend;
+          uniform float u_glassDepth;
           uniform vec2 u_phase;
           uniform float u_focusCount;
           uniform vec4 u_focusZones[3];
@@ -2002,45 +2006,59 @@
             float refraction = clamp(u_refractionField, 0.0, 1.0);
             float focusStrength = clamp(u_focusField, 0.0, 1.0);
             float fieldBlend = clamp(u_fieldBlend, 0.0, 1.0);
+            float glassDepth = clamp(u_glassDepth, 0.0, 1.0);
 
-            float freq = mix(26.0, 96.0, density);
-            float breathingOffset = sin(uv.y * (3.6 + breath * 3.8) + u_phase.x) * (0.008 + breath * 0.012);
-            float ridgePrimary = sin((uv.x + breathingOffset) * freq + u_phase.y);
-            float ridgeSecondary = sin((uv.x * 0.62 - uv.y * 0.16) * freq * (0.46 + breath * 0.14) - u_phase.x * 0.7);
-            float ridgeMix = ridgePrimary * 0.68 + ridgeSecondary * 0.32;
+            float freq = mix(22.0, 64.0, density);
+            float breathingOffset = sin(uv.y * (2.2 + breath * 2.4) + u_phase.x) * (0.0015 + breath * 0.004);
+            float ridgeUnit = (uv.x + breathingOffset) * freq / 6.2831853 + u_phase.y * 0.1591549;
+            float ridgeCell = fract(ridgeUnit);
+            float ridgeCenter = ridgeCell * 2.0 - 1.0;
+            float cylinderFace = sqrt(max(0.0, 1.0 - ridgeCenter * ridgeCenter));
+            float normalX = clamp(ridgeCenter / max(cylinderFace, 0.24), -1.45, 1.45);
 
             float focusMask = 0.0;
             float focusDrift = 0.0;
             for (int i = 0; i < 3; i += 1) {
               float enabled = step(float(i) + 0.5, u_focusCount);
               vec4 zone = u_focusZones[i];
-              float zoneX = gaussian(uv.x - zone.x, zone.y * (0.4 + fieldBlend * 0.36));
-              float zoneY = 0.76 + 0.24 * sin(uv.y * 6.28318 + zone.w * 220.0 + u_phase.x);
+              float zoneX = gaussian(uv.x - zone.x, zone.y * (0.52 + fieldBlend * 0.28));
+              float zoneY = 0.82 + 0.18 * gaussian(uv.y - (0.44 + 0.06 * float(i)), 0.38);
               float local = enabled * zoneX * zone.z * zoneY;
               focusMask += local;
               focusDrift += local * zone.w;
             }
-            focusMask = clamp(focusMask, 0.0, 1.35);
+            focusMask = clamp(focusMask, 0.0, 1.0);
 
-            float amplitude = (0.002 + refraction * 0.012) * (0.65 + focusMask * (0.9 + focusStrength * 0.4));
-            float dispX = ridgeMix * amplitude + focusDrift * 0.3;
-            float dispY = sin(uv.x * freq * 0.72 + u_phase.x) * amplitude * (0.22 + fieldBlend * 0.18);
+            float amplitude = (0.0014 + refraction * 0.008 + glassDepth * 0.005) * (0.76 + focusMask * (0.42 + focusStrength * 0.18));
+            float dispX = normalX * amplitude + focusDrift * (0.08 + glassDepth * 0.1);
+            float dispY = sin(uv.y * 3.14159 + u_phase.x) * amplitude * (0.018 + fieldBlend * 0.02);
 
             vec2 sampleUv = clamp(uv + vec2(dispX, dispY), vec2(0.001), vec2(0.999));
-            vec3 sourceColor = texture2D(u_source, sampleUv).rgb;
+            vec2 chroma = vec2(dispX, 0.0) * (0.28 + glassDepth * 0.42);
+            float red = texture2D(u_source, clamp(sampleUv + chroma * 0.34, vec2(0.001), vec2(0.999))).r;
+            float green = texture2D(u_source, sampleUv).g;
+            float blue = texture2D(u_source, clamp(sampleUv - chroma * 0.28, vec2(0.001), vec2(0.999))).b;
+            vec3 sourceColor = vec3(red, green, blue);
 
-            float ridgeHighlight = pow(0.5 + 0.5 * cos((uv.x + breathingOffset * 0.2) * freq * 1.08 + u_phase.y * 0.6), 1.6 + (1.0 - fieldBlend) * 1.1);
-            float ridgeShadow = pow(0.5 + 0.5 * sin((uv.x - breathingOffset * 0.4) * freq * 0.94 - u_phase.x), 2.1);
-            float glow = ridgeHighlight * (0.04 + refraction * 0.04) + focusMask * (0.03 + focusStrength * 0.05);
-            float veil = 0.03 + fieldBlend * 0.08 + focusMask * 0.04;
+            float ridgeHighlight = pow(cylinderFace, 4.2 + (1.0 - fieldBlend) * 0.8);
+            float edgeLine = smoothstep(0.64, 0.96, abs(ridgeCenter)) * (1.0 - smoothstep(0.96, 1.0, abs(ridgeCenter)));
+            float orderedCaustic = pow(cylinderFace, 9.0 + glassDepth * 5.0);
+            float ridgeShadow = smoothstep(0.58, 1.0, abs(ridgeCenter)) * (0.55 + (1.0 - cylinderFace) * 0.45);
+            float glow = ridgeHighlight * (0.02 + refraction * 0.028 + glassDepth * 0.026)
+              + edgeLine * (0.012 + glassDepth * 0.024)
+              + orderedCaustic * (0.004 + focusMask * 0.012 + glassDepth * 0.01)
+              + focusMask * (0.022 + focusStrength * 0.042);
+            float veil = 0.025 + fieldBlend * 0.065 + focusMask * 0.035;
 
             vec3 tint = mix(u_surfaceColor, u_accentColor, 0.28 + focusMask * 0.2);
             vec3 color = sourceColor;
             color += tint * glow;
+            color += vec3(1.0, 0.9, 0.76) * edgeLine * (0.008 + glassDepth * 0.018);
+            color += vec3(0.8, 0.92, 1.0) * orderedCaustic * (0.004 + refraction * 0.01);
             color = mix(color, mix(color, tint, 0.18), veil * 0.45);
-            color -= u_inkColor * ridgeShadow * (0.015 + (1.0 - fieldBlend) * 0.025);
+            color -= u_inkColor * ridgeShadow * (0.01 + (1.0 - fieldBlend) * 0.018 + glassDepth * 0.012);
 
-            float contrast = 1.0 + refraction * 0.12 + focusMask * 0.09;
+            float contrast = 1.0 + refraction * 0.12 + focusMask * 0.08 + glassDepth * 0.035;
             color = (color - 0.5) * contrast + 0.5;
             color = clamp(color, 0.0, 1.0);
 
@@ -2074,6 +2092,7 @@
           refractionField: gl.getUniformLocation(program, "u_refractionField"),
           focusField: gl.getUniformLocation(program, "u_focusField"),
           fieldBlend: gl.getUniformLocation(program, "u_fieldBlend"),
+          glassDepth: gl.getUniformLocation(program, "u_glassDepth"),
           phase: gl.getUniformLocation(program, "u_phase"),
           focusCount: gl.getUniformLocation(program, "u_focusCount"),
           focusZones: gl.getUniformLocation(program, "u_focusZones[0]"),
@@ -2160,6 +2179,7 @@
           gl.uniform1f(uniforms.refractionField, currentState.advanced.refractionField ?? 0.48);
           gl.uniform1f(uniforms.focusField, currentState.advanced.focusField ?? 0.54);
           gl.uniform1f(uniforms.fieldBlend, currentState.advanced.fieldBlend ?? 0.5);
+          gl.uniform1f(uniforms.glassDepth, currentState.advanced.glassDepth ?? 0.58);
           gl.uniform2f(uniforms.phase, composition.basePhase, composition.refractionPhase);
           gl.uniform1f(uniforms.focusCount, Math.min(3, composition.focusZones.length));
           gl.uniform4fv(uniforms.focusZones, focusData);
@@ -2486,34 +2506,22 @@
         ctx.restore();
       }
 
-      function drawPrismTexture(ctx, width, height, palette, density, strength) {
-        const stepX = width * (0.016 + (1 - density) * 0.022);
-        const stepY = width * 0.026;
-        const rx = stepX * (0.18 + strength * 0.12);
-        const ry = stepY * (0.12 + strength * 0.08);
+      function drawPrismTexture(ctx, width, height, palette, density, strength, rng) {
+        const stepX = width * (0.028 + (1 - density) * 0.04);
+        const depth = strength ?? 0.24;
         ctx.save();
-        for (let row = -1; row < Math.ceil(height / stepY) + 2; row += 1) {
-          const y = row * stepY;
-          const offset = row % 2 === 0 ? 0 : stepX * 0.5;
-          for (let x = -stepX; x < width + stepX; x += stepX) {
-            ctx.beginPath();
-            ctx.ellipse(x + offset, y, rx, ry, 0, 0, Math.PI * 2);
-            ctx.fillStyle = hexToRgba(palette.accent, 0.015 + strength * 0.04);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(x + offset, y, rx * 0.46, ry * 0.46, 0, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.012 + strength * 0.03})`;
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x + offset, y - ry * 1.2);
-            ctx.lineTo(x + offset + rx * 1.15, y);
-            ctx.lineTo(x + offset, y + ry * 1.2);
-            ctx.lineTo(x + offset - rx * 1.15, y);
-            ctx.closePath();
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.006 + strength * 0.018})`;
-            ctx.fill();
-          }
+        ctx.globalCompositeOperation = "screen";
+        for (let x = -stepX; x < width + stepX * 2; x += stepX) {
+          const highlight = ctx.createLinearGradient(x, 0, x + stepX, 0);
+          highlight.addColorStop(0, hexToRgba(palette.surface, 0));
+          highlight.addColorStop(0.24, `rgba(255, 255, 255, ${0.005 + depth * 0.018})`);
+          highlight.addColorStop(0.5, hexToRgba(palette.accentSoft, 0.008 + depth * 0.022));
+          highlight.addColorStop(0.78, `rgba(255, 255, 255, ${0.004 + depth * 0.012})`);
+          highlight.addColorStop(1, hexToRgba(palette.surface, 0));
+          ctx.fillStyle = highlight;
+          ctx.fillRect(x, 0, stepX, height);
         }
+
         ctx.restore();
       }
 
@@ -2705,7 +2713,9 @@
       }
 
       function drawArtworkFinishingPass(ctx, width, height, palette, currentState, rng) {
-        drawDiagonalAtmosphere(ctx, width, height, palette, currentState);
+        if (currentState.shapeMode !== "reeded-column") {
+          drawDiagonalAtmosphere(ctx, width, height, palette, currentState);
+        }
 
         if (currentState.shapeMode === "minimal-form") {
           drawMinimalFinishing(ctx, width, height, palette, currentState);
@@ -3283,24 +3293,75 @@
 
       function buildReededFieldComposition(width, height, currentState, rng) {
         const focusStrength = currentState.advanced.focusField ?? 0.54;
-        const zoneCount = 1 + Math.round(focusStrength * 1.2);
-        const focusZones = [];
-
-        for (let index = 0; index < zoneCount; index += 1) {
-          focusZones.push({
-            x: width * (0.22 + rng() * 0.56),
-            width: width * (0.16 + focusStrength * 0.22 + rng() * 0.1),
-            intensity: 0.24 + focusStrength * 0.42 + rng() * 0.16,
-            drift: (rng() - 0.5) * width * (0.02 + (currentState.advanced.refractionField ?? 0.48) * 0.05),
-            bias: rng() * Math.PI * 2,
-          });
-        }
+        const refractionField = currentState.advanced.refractionField ?? 0.48;
+        const focusZones = [
+          {
+            x: width * 0.38,
+            width: width * (0.2 + focusStrength * 0.16),
+            intensity: 0.22 + focusStrength * 0.32,
+            drift: -width * (0.004 + refractionField * 0.006),
+            bias: 0,
+          },
+          {
+            x: width * 0.66,
+            width: width * (0.18 + focusStrength * 0.14),
+            intensity: 0.16 + focusStrength * 0.24,
+            drift: width * (0.003 + refractionField * 0.005),
+            bias: Math.PI,
+          },
+        ];
 
         return {
-          basePhase: rng() * Math.PI * 2,
-          refractionPhase: rng() * Math.PI * 2,
+          basePhase: rng() * Math.PI * 0.18,
+          refractionPhase: Math.PI * 0.5 + rng() * Math.PI * 0.12,
           focusZones,
         };
+      }
+
+      function drawReededGlassBackplate(ctx, width, height, palette, currentState) {
+        const depth = currentState.advanced.glassDepth ?? 0.58;
+        const blend = currentState.advanced.fieldBlend ?? 0.5;
+
+        paintSoftRoundedRect(ctx, {
+          x: width * 0.12,
+          y: height * 0.06,
+          width: width * 0.28,
+          height: height * 0.86,
+          radius: width * 0.11,
+          color: hexToRgba(palette.accent, 0.1 + depth * 0.08),
+          blur: width * (0.055 + blend * 0.035),
+          composite: "screen",
+        });
+        paintSoftRoundedRect(ctx, {
+          x: width * 0.46,
+          y: height * 0.12,
+          width: width * 0.3,
+          height: height * 0.74,
+          radius: width * 0.12,
+          color: hexToRgba(palette.surface, 0.08 + depth * 0.07),
+          blur: width * (0.05 + blend * 0.04),
+          composite: "screen",
+        });
+        paintSoftRoundedRect(ctx, {
+          x: width * 0.64,
+          y: height * 0.22,
+          width: width * 0.2,
+          height: height * 0.6,
+          radius: width * 0.09,
+          color: hexToRgba(palette.ink, 0.055 + depth * 0.04),
+          blur: width * (0.07 + blend * 0.035),
+          composite: "multiply",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * 0.48,
+          y: height * 0.46,
+          rx: width * 0.2,
+          ry: height * 0.34,
+          rotation: 0,
+          color: `rgba(255, 255, 255, ${0.04 + depth * 0.04})`,
+          blur: width * (0.06 + blend * 0.04),
+          composite: "screen",
+        });
       }
 
       function drawReededFieldBase(ctx, width, height, palette, currentState, composition) {
@@ -3308,21 +3369,21 @@
         const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
         const ridgeBreath = currentState.advanced.ridgeBreath ?? 0.36;
         const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
-        const step = width * (0.014 + (1 - ridgeDensity) * 0.028);
+        const step = width * (0.026 + (1 - ridgeDensity) * 0.042);
 
         layer.ctx.save();
         layer.ctx.globalCompositeOperation = "soft-light";
         for (let x = -step; x < width + step * 2; x += step) {
           const normalized = x / Math.max(step, 1);
-          const localWidth = step * (0.78 + Math.sin(composition.basePhase + normalized * (0.48 + ridgeBreath * 0.5)) * ridgeBreath * 0.34);
-          let localIntensity = 0.05 + ridgeDensity * 0.05;
+          const localWidth = step * (0.82 + Math.sin(composition.basePhase + normalized * 0.16) * ridgeBreath * 0.08);
+          let localIntensity = 0.035 + ridgeDensity * 0.035;
           composition.focusZones.forEach((zone) => {
-            localIntensity += gaussianInfluence(x, zone.x, zone.width * 0.9) * zone.intensity * 0.08;
+            localIntensity += gaussianInfluence(x, zone.x, zone.width * 0.9) * zone.intensity * 0.05;
           });
           const gradient = layer.ctx.createLinearGradient(x, 0, x + localWidth, 0);
           gradient.addColorStop(0, hexToRgba(palette.ink, 0.08 + localIntensity));
           gradient.addColorStop(0.22, hexToRgba(palette.surface, 0.03 + localIntensity * 0.3));
-          gradient.addColorStop(0.48, `rgba(255, 255, 255, ${0.04 + localIntensity * 0.65})`);
+          gradient.addColorStop(0.48, `rgba(255, 255, 255, ${0.032 + localIntensity * 0.52})`);
           gradient.addColorStop(0.72, hexToRgba(palette.accentSoft, 0.04 + localIntensity * 0.35));
           gradient.addColorStop(1, hexToRgba(palette.ink, 0.06 + localIntensity * 0.45));
           layer.ctx.fillStyle = gradient;
@@ -3351,22 +3412,22 @@
         const refractionField = currentState.advanced.refractionField ?? 0.48;
         const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
         const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
-        const step = width * (0.018 + (1 - ridgeDensity) * 0.032);
+        const step = width * (0.03 + (1 - ridgeDensity) * 0.044);
 
         layer.ctx.save();
         layer.ctx.globalCompositeOperation = "screen";
         for (let x = -step; x < width + step * 2; x += step) {
-          let intensity = 0.02 + refractionField * 0.05;
-          let drift = Math.sin(composition.refractionPhase + x / Math.max(step, 1) * 0.42) * width * 0.004;
+          let intensity = 0.014 + refractionField * 0.034;
+          let drift = Math.sin(composition.refractionPhase + x / Math.max(step, 1) * 0.16) * width * 0.0018;
           composition.focusZones.forEach((zone) => {
             const influence = gaussianInfluence(x, zone.x, zone.width * 0.72);
-            intensity += influence * zone.intensity * 0.08;
-            drift += influence * zone.drift * 0.18;
+            intensity += influence * zone.intensity * 0.05;
+            drift += influence * zone.drift * 0.12;
           });
           const bandGradient = layer.ctx.createLinearGradient(x + drift, 0, x + drift + step * 0.86, 0);
           bandGradient.addColorStop(0, hexToRgba(palette.accent, 0));
           bandGradient.addColorStop(0.3, hexToRgba(palette.surface, 0.03 + intensity));
-          bandGradient.addColorStop(0.55, `rgba(255, 255, 255, ${0.02 + intensity * (0.85 + fieldBlend * 0.3)})`);
+          bandGradient.addColorStop(0.55, `rgba(255, 255, 255, ${0.014 + intensity * (0.7 + fieldBlend * 0.22)})`);
           bandGradient.addColorStop(0.82, hexToRgba(palette.accentSoft, 0.02 + intensity * 0.6));
           bandGradient.addColorStop(1, hexToRgba(palette.accent, 0));
           layer.ctx.fillStyle = bandGradient;
@@ -3422,9 +3483,64 @@
         ctx.drawImage(layer.canvas, 0, 0);
       }
 
+      function drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition) {
+        const layer = createLayer(width, height);
+        const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
+        const refractionField = currentState.advanced.refractionField ?? 0.48;
+        const focusStrength = currentState.advanced.focusField ?? 0.54;
+        const glassDepth = currentState.advanced.glassDepth ?? 0.58;
+        const step = width * (0.024 + (1 - ridgeDensity) * 0.04);
+
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "screen";
+        for (let x = -step; x < width + step * 2; x += step) {
+          const localWidth = step * 0.92;
+          const gradient = layer.ctx.createLinearGradient(x, 0, x + localWidth, 0);
+          gradient.addColorStop(0, hexToRgba(palette.ink, 0));
+          gradient.addColorStop(0.1, hexToRgba(palette.accentSoft, 0.008 + glassDepth * 0.014));
+          gradient.addColorStop(0.28, `rgba(255, 255, 255, ${0.014 + glassDepth * 0.03})`);
+          gradient.addColorStop(0.48, hexToRgba(palette.surface, 0.012 + refractionField * 0.022));
+          gradient.addColorStop(0.72, `rgba(255, 255, 255, ${0.006 + glassDepth * 0.018})`);
+          gradient.addColorStop(1, hexToRgba(palette.ink, 0));
+          layer.ctx.fillStyle = gradient;
+          layer.ctx.fillRect(x, 0, localWidth, height);
+        }
+        layer.ctx.restore();
+
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "multiply";
+        for (let x = -step; x < width + step * 2; x += step) {
+          const shadow = layer.ctx.createLinearGradient(x, 0, x + step, 0);
+          shadow.addColorStop(0, hexToRgba(palette.ink, 0.018 + glassDepth * 0.022));
+          shadow.addColorStop(0.2, hexToRgba(palette.ink, 0));
+          shadow.addColorStop(0.8, hexToRgba(palette.ink, 0));
+          shadow.addColorStop(1, hexToRgba(palette.ink, 0.012 + glassDepth * 0.018));
+          layer.ctx.fillStyle = shadow;
+          layer.ctx.fillRect(x, 0, step, height);
+        }
+        layer.ctx.restore();
+
+        composition.focusZones.forEach((zone, index) => {
+          const strength = 0.035 + zone.intensity * 0.06 + glassDepth * 0.035;
+          paintSoftRoundedRect(layer.ctx, {
+            x: zone.x - zone.width * 0.42 + zone.drift * 0.28,
+            y: height * (0.02 + index * 0.045),
+            width: zone.width * (0.48 + focusStrength * 0.2),
+            height: height * 0.94,
+            radius: zone.width * 0.28,
+            color: `rgba(255, 255, 255, ${strength})`,
+            blur: width * (0.018 + glassDepth * 0.035),
+            composite: "screen",
+          });
+        });
+
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+
       function drawReededGlassGeometry(ctx, width, height, palette, currentState, rng) {
         const composition = buildReededFieldComposition(width, height, currentState, rng);
         drawReededGlassField2D(ctx, width, height, palette, currentState, composition);
+        drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
       }
 
       function drawReededGlassField2D(ctx, width, height, palette, currentState, composition) {
@@ -3853,16 +3969,7 @@
 
         if (currentState.textureMode === "prism-glass") {
           const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.48;
-          const ridgeContrast = currentState.advanced.refractionField ?? currentState.advanced.ridgeContrast ?? 0.54;
-          drawPrismTexture(ctx, width, height, palette, ridgeDensity, currentState.advanced.prismStrength);
-          const step = width * (0.018 + (1 - ridgeDensity) * 0.03);
-          ctx.save();
-          ctx.strokeStyle = `rgba(255, 255, 255, ${0.018 + ridgeContrast * 0.028})`;
-          ctx.lineWidth = 1;
-          for (let x = step * 0.5; x < width; x += step) {
-            line(ctx, x, 0, x, height);
-          }
-          ctx.restore();
+          drawPrismTexture(ctx, width, height, palette, ridgeDensity, currentState.advanced.prismStrength, rng);
         }
 
         if (currentState.textureMode === "stardust-sparks") {
@@ -3966,6 +4073,7 @@
       function renderReededGlassMode(ctx, width, height, palette, currentState, rng) {
         const backgroundLayer = createLayer(width, height);
         drawBackgroundMode(backgroundLayer.ctx, width, height, palette, currentState, rng);
+        drawReededGlassBackplate(backgroundLayer.ctx, width, height, palette, currentState);
 
         const composition = buildReededFieldComposition(width, height, currentState, rng);
         const usedWebgl = renderReededGlassPass(backgroundLayer.canvas, ctx, width, height, palette, currentState, composition);
@@ -3974,6 +4082,8 @@
           ctx.drawImage(backgroundLayer.canvas, 0, 0);
           drawReededGlassField2D(ctx, width, height, palette, currentState, composition);
         }
+
+        drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
       }
 
       function renderArtwork(ctx, outputWidth, outputHeight, currentState) {
