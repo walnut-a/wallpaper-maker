@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Wallpaper Maker</title>
+    <title>手机壁纸生成器</title>
     <link
       rel="icon"
       href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="16" fill="%23f4efe8"/%3E%3Crect x="14" y="6" width="36" height="52" rx="12" fill="%23f6dfd2"/%3E%3Cellipse cx="34" cy="24" rx="12" ry="18" fill="%23bdd7f1" fill-opacity="0.9"/%3E%3Cellipse cx="32" cy="42" rx="8" ry="14" fill="%236f88b3" fill-opacity="0.85"/%3E%3C/svg%3E'
@@ -908,8 +908,8 @@
               title: "背景控制",
               controls: [
                 { key: "warpAngle", label: "速度角度", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
-                { key: "warpDensity", label: "光流密度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
-                { key: "flareIntensity", label: "爆闪强度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "warpDensity", label: "光带密度", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+                { key: "flareIntensity", label: "光晕强度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1048,7 +1048,7 @@
           ],
         },
         "orbital-tether": {
-          label: "轨舱系绳",
+          label: "深空光膜",
           defaults: {
             podScale: 0.58,
             tetherTension: 0.72,
@@ -1058,9 +1058,9 @@
             {
               title: "主体控制",
               controls: [
-                { key: "podScale", label: "主体尺度", min: 0.12, max: 0.92, step: 0.01, format: "percent" },
-                { key: "tetherTension", label: "连接张力", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
-                { key: "driftOffset", label: "远景偏移", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "podScale", label: "光膜尺度", min: 0.12, max: 0.92, step: 0.01, format: "percent" },
+                { key: "tetherTension", label: "曲率张力", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
+                { key: "driftOffset", label: "远景漂移", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1123,7 +1123,7 @@
           ],
         },
         "stardust-sparks": {
-          label: "星尘碎光",
+          label: "微光颗粒",
           defaults: {
             sparkDensity: 0.42,
             sparkSharpness: 0.68,
@@ -1132,8 +1132,8 @@
             {
               title: "纹理控制",
               controls: [
-                { key: "sparkDensity", label: "碎光密度", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
-                { key: "sparkSharpness", label: "星点锐度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
+                { key: "sparkDensity", label: "颗粒密度", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
+                { key: "sparkSharpness", label: "颗粒锐度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1253,8 +1253,8 @@
           },
         },
         "space-cinematic": {
-          label: "太空电影感",
-          note: "像一张高速跃迁中的太空电影海报，有斜向光流、深空火光和一根带张力的系绳。",
+          label: "深空光膜感",
+          note: "保留深空和速度感，但去掉具象物体，只用暗色渐变、弯曲光膜和细颗粒制造纵深。",
           backgroundMode: "warp-canopy",
           shapeMode: "orbital-tether",
           textureMode: "stardust-sparks",
@@ -1266,15 +1266,15 @@
               softness: 0.42,
               glowRadius: 0.74,
               tonalSplit: 0.76,
-              grainFine: 0.12,
-              warpAngle: 0.66,
-              warpDensity: 0.62,
-              flareIntensity: 0.64,
-              podScale: 0.58,
-              tetherTension: 0.72,
-              driftOffset: 0.46,
-              sparkDensity: 0.42,
-              sparkSharpness: 0.68,
+              grainFine: 0.2,
+              warpAngle: 0.62,
+              warpDensity: 0.48,
+              flareIntensity: 0.46,
+              podScale: 0.56,
+              tetherTension: 0.66,
+              driftOffset: 0.52,
+              sparkDensity: 0.28,
+              sparkSharpness: 0.38,
             },
           },
         },
@@ -2250,6 +2250,38 @@
         ctx.restore();
       }
 
+      function paintGradientRibbon(ctx, points, { stops, lineWidth, blur = 0, alpha = 1, composite = "source-over" }) {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0];
+        const last = points[points.length - 1];
+        const gradient = ctx.createLinearGradient(first.x, first.y, last.x, last.y);
+        stops.forEach((stop) => gradient.addColorStop(stop.offset, stop.color));
+
+        ctx.save();
+        ctx.globalCompositeOperation = composite;
+        ctx.globalAlpha = alpha;
+        ctx.filter = `blur(${Math.max(0, blur)}px)`;
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(first.x, first.y);
+        for (let index = 1; index < points.length; index += 1) {
+          const previous = points[index - 1];
+          const point = points[index];
+          const midX = (previous.x + point.x) / 2;
+          const midY = (previous.y + point.y) / 2;
+          ctx.quadraticCurveTo(previous.x, previous.y, midX, midY);
+        }
+        const lastPoint = points[points.length - 1];
+        ctx.lineTo(lastPoint.x, lastPoint.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       function midpoint(pointA, pointB) {
         return {
           x: (pointA.x + pointB.x) * 0.5,
@@ -2526,70 +2558,76 @@
       }
 
       function drawMinimalFinishing(ctx, width, height, palette, currentState) {
-        const panelAlpha = 0.08 + currentState.advanced.tonalSplit * 0.08;
-        paintCrispRoundedRect(ctx, {
-          x: width * 0.37,
-          y: height * 0.12,
-          width: width * 0.34,
-          height: height * 0.72,
-          radius: width * 0.16,
-          fill: `rgba(255, 255, 255, ${panelAlpha})`,
-          stroke: hexToRgba(palette.ink, 0.08),
-          lineWidth: Math.max(1, width * 0.002),
-          rotation: -0.04,
-          composite: "soft-light",
-        });
-        paintCrispRoundedRect(ctx, {
-          x: width * 0.52,
-          y: height * 0.42,
-          width: width * 0.25,
-          height: height * 0.28,
-          radius: width * 0.11,
-          fill: hexToRgba(palette.ink, 0.12 + currentState.advanced.tonalSplit * 0.08),
-          stroke: `rgba(255, 255, 255, ${0.06 + currentState.advanced.glowRadius * 0.06})`,
-          lineWidth: Math.max(1, width * 0.002),
-          rotation: -0.06,
-        });
-        ctx.save();
-        ctx.globalCompositeOperation = "multiply";
-        ctx.strokeStyle = hexToRgba(palette.ink, 0.08);
-        ctx.lineWidth = Math.max(1, width * 0.0024);
-        ctx.beginPath();
-        ctx.moveTo(width * 0.42, height * 0.2);
-        ctx.bezierCurveTo(width * 0.54, height * 0.34, width * 0.46, height * 0.62, width * 0.62, height * 0.82);
-        ctx.stroke();
-        ctx.restore();
+        const glow = currentState.advanced.glowRadius ?? 0.55;
+        const split = currentState.advanced.tonalSplit ?? 0.5;
         paintSoftEllipse(ctx, {
-          x: width * 0.58,
-          y: height * 0.74,
+          x: width * 0.6,
+          y: height * 0.42,
+          rx: width * 0.2,
+          ry: height * 0.34,
+          rotation: -0.06,
+          color: `rgba(255, 255, 255, ${0.08 + glow * 0.08})`,
+          blur: width * 0.045,
+          composite: "screen",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * 0.55,
+          y: height * 0.64,
           rx: width * 0.18,
-          ry: height * 0.12,
-          rotation: -0.08,
-          color: hexToRgba(palette.ink, 0.09),
-          blur: width * 0.026,
+          ry: height * 0.24,
+          rotation: 0.12,
+          color: hexToRgba(palette.ink, 0.08 + split * 0.05),
+          blur: width * 0.035,
+          composite: "multiply",
+        });
+        paintGradientRibbon(ctx, [
+          { x: width * 0.38, y: height * 0.2 },
+          { x: width * 0.5, y: height * 0.42 },
+          { x: width * 0.52, y: height * 0.66 },
+          { x: width * 0.62, y: height * 0.84 },
+        ], {
+          stops: [
+            { offset: 0, color: hexToRgba(palette.ink, 0) },
+            { offset: 0.42, color: hexToRgba(palette.ink, 0.055) },
+            { offset: 1, color: hexToRgba(palette.ink, 0) },
+          ],
+          lineWidth: Math.max(1, width * 0.005),
+          blur: width * 0.006,
+          composite: "multiply",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * 0.56,
+          y: height * 0.78,
+          rx: width * 0.16,
+          ry: height * 0.08,
+          rotation: -0.12,
+          color: hexToRgba(palette.ink, 0.075),
+          blur: width * 0.032,
           composite: "multiply",
         });
       }
 
       function drawFlowFinishing(ctx, width, height, palette, currentState, rng) {
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
+        const drift = currentState.advanced.drift ?? 0.58;
+        const stretch = currentState.advanced.stretch ?? 0.58;
         for (let index = 0; index < 3; index += 1) {
           const y = height * (0.26 + index * 0.2 + (rng() - 0.5) * 0.04);
-          const gradient = ctx.createLinearGradient(width * 0.08, y, width * 0.9, y + height * 0.24);
-          gradient.addColorStop(0, hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0));
-          gradient.addColorStop(0.5, hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0.16 + currentState.complexity * 0.08));
-          gradient.addColorStop(1, hexToRgba(palette.ink, 0));
-          ctx.globalCompositeOperation = index % 2 === 0 ? "screen" : "multiply";
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = width * (0.014 + currentState.density * 0.012);
-          ctx.beginPath();
-          ctx.moveTo(width * -0.04, y);
-          ctx.bezierCurveTo(width * 0.22, y - height * 0.16, width * 0.44, y + height * 0.18, width * 0.96, y - height * 0.04);
-          ctx.stroke();
+          paintGradientRibbon(ctx, [
+            { x: width * -0.06, y },
+            { x: width * 0.18, y: y - height * (0.08 + drift * 0.06) },
+            { x: width * 0.46, y: y + height * (0.08 + stretch * 0.08) },
+            { x: width * 1.02, y: y - height * 0.03 },
+          ], {
+            stops: [
+              { offset: 0, color: hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0) },
+              { offset: 0.5, color: hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0.09 + currentState.complexity * 0.05) },
+              { offset: 1, color: hexToRgba(palette.ink, 0) },
+            ],
+            lineWidth: width * (0.028 + currentState.density * 0.018),
+            blur: width * (0.01 + currentState.advanced.softness * 0.012),
+            composite: index % 2 === 0 ? "screen" : "soft-light",
+          });
         }
-        ctx.restore();
 
         paintSoftEllipse(ctx, {
           x: width * 0.42,
@@ -2597,8 +2635,8 @@
           rx: width * 0.36,
           ry: height * 0.18,
           rotation: -0.22,
-          color: hexToRgba(palette.ink, 0.18 + currentState.advanced.tonalSplit * 0.08),
-          blur: width * 0.032,
+          color: hexToRgba(palette.ink, 0.09 + currentState.advanced.tonalSplit * 0.045),
+          blur: width * 0.056,
           composite: "multiply",
         });
         paintSoftEllipse(ctx, {
@@ -2607,21 +2645,10 @@
           rx: width * 0.26,
           ry: height * 0.16,
           rotation: 0.18,
-          color: `rgba(255, 255, 255, ${0.16 + currentState.advanced.glowRadius * 0.08})`,
-          blur: width * 0.03,
+          color: `rgba(255, 255, 255, ${0.12 + currentState.advanced.glowRadius * 0.07})`,
+          blur: width * 0.045,
           composite: "screen",
         });
-
-        ctx.save();
-        ctx.globalCompositeOperation = "multiply";
-        ctx.strokeStyle = hexToRgba(palette.ink, 0.14);
-        ctx.lineWidth = width * 0.018;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(width * 0.02, height * 0.72);
-        ctx.bezierCurveTo(width * 0.24, height * 0.5, width * 0.48, height * 0.86, width * 0.92, height * 0.5);
-        ctx.stroke();
-        ctx.restore();
       }
 
       function drawBlockFinishing(ctx, width, height, palette, currentState) {
@@ -2645,28 +2672,35 @@
           blur: width * 0.028,
           composite: "screen",
         });
-        paintCrispRoundedRect(ctx, {
-          x: width * 0.1,
-          y: height * 0.52,
-          width: width * 0.48,
-          height: height * 0.18,
-          radius: width * 0.08,
-          fill: hexToRgba(palette.accent, 0.12),
-          stroke: `rgba(255, 255, 255, ${0.08 + currentState.advanced.glowRadius * 0.08})`,
-          lineWidth: Math.max(1, width * 0.002),
-          rotation: -0.1,
-          composite: "soft-light",
+        paintGradientRibbon(ctx, [
+          { x: width * 0.02, y: height * 0.62 },
+          { x: width * 0.28, y: height * 0.52 },
+          { x: width * 0.58, y: height * 0.54 },
+          { x: width * 0.88, y: height * 0.42 },
+        ], {
+          stops: [
+            { offset: 0, color: hexToRgba(palette.accent, 0) },
+            { offset: 0.48, color: hexToRgba(palette.accent, 0.16) },
+            { offset: 1, color: hexToRgba(palette.surface, 0) },
+          ],
+          lineWidth: width * 0.1,
+          blur: width * 0.03,
+          composite: "screen",
         });
-        paintCrispRoundedRect(ctx, {
-          x: width * 0.54,
-          y: height * 0.21,
-          width: width * 0.28,
-          height: height * 0.2,
-          radius: width * 0.1,
-          fill: hexToRgba(palette.ink, 0.08),
-          stroke: hexToRgba(palette.surface, 0.18),
-          lineWidth: Math.max(1, width * 0.002),
-          rotation: 0.12,
+        paintGradientRibbon(ctx, [
+          { x: width * 0.22, y: height * 0.22 },
+          { x: width * 0.48, y: height * 0.34 },
+          { x: width * 0.72, y: height * 0.28 },
+          { x: width * 0.92, y: height * 0.18 },
+        ], {
+          stops: [
+            { offset: 0, color: hexToRgba(palette.ink, 0) },
+            { offset: 0.5, color: hexToRgba(palette.ink, 0.08) },
+            { offset: 1, color: hexToRgba(palette.ink, 0) },
+          ],
+          lineWidth: width * 0.07,
+          blur: width * 0.024,
+          composite: "multiply",
         });
       }
 
@@ -2704,6 +2738,7 @@
         const warpAngle = getWarpAngleRadians(currentState);
         const warpDensity = currentState.advanced.warpDensity ?? 0.62;
         const flareIntensity = currentState.advanced.flareIntensity ?? 0.64;
+        const softness = currentState.advanced.softness ?? 0.46;
 
         const baseGradient = ctx.createLinearGradient(0, 0, width * 0.82, height);
         baseGradient.addColorStop(0, palette.backgroundA);
@@ -2714,21 +2749,21 @@
         ctx.fillRect(0, 0, width, height);
 
         const depthGlow = ctx.createRadialGradient(width * 0.2, height * 0.24, 0, width * 0.2, height * 0.24, width * 0.94);
-        depthGlow.addColorStop(0, hexToRgba(palette.accent, 0.24 + flareIntensity * 0.12));
+        depthGlow.addColorStop(0, hexToRgba(palette.accent, 0.16 + flareIntensity * 0.09));
         depthGlow.addColorStop(1, hexToRgba(palette.accent, 0));
         ctx.fillStyle = depthGlow;
         ctx.fillRect(0, 0, width, height);
 
         const layer = createLayer(width, height);
         layer.ctx.globalCompositeOperation = "screen";
-        const streakCount = 70 + Math.round(warpDensity * 110);
+        const streakCount = 28 + Math.round(warpDensity * 62);
 
         for (let index = 0; index < streakCount; index += 1) {
           const x = (rng() - 0.12) * width * 1.24;
           const y = (rng() - 0.08) * height * 1.18;
-          const length = width * (0.28 + rng() * 1.08 + warpDensity * 0.42);
-          const thickness = width * (0.0012 + rng() * 0.004 + warpDensity * 0.006);
-          const blur = width * (0.0012 + rng() * 0.009 + flareIntensity * 0.007);
+          const length = width * (0.24 + rng() * 0.88 + warpDensity * 0.34);
+          const thickness = width * (0.0008 + rng() * 0.0025 + warpDensity * 0.0028);
+          const blur = width * (0.004 + rng() * 0.014 + flareIntensity * 0.01);
           const accentMix = rng();
           const streakColor = accentMix > 0.82
             ? palette.accentSoft
@@ -2742,54 +2777,77 @@
           layer.ctx.filter = `blur(${blur}px)`;
           const gradient = layer.ctx.createLinearGradient(-length * 0.5, 0, length * 0.5, 0);
           gradient.addColorStop(0, hexToRgba(streakColor, 0));
-          gradient.addColorStop(0.18, hexToRgba(streakColor, 0.03 + flareIntensity * 0.07));
-          gradient.addColorStop(0.48, hexToRgba(streakColor, 0.2 + warpDensity * 0.18));
-          gradient.addColorStop(0.76, hexToRgba(streakColor, 0.05 + flareIntensity * 0.08));
+          gradient.addColorStop(0.18, hexToRgba(streakColor, 0.015 + flareIntensity * 0.035));
+          gradient.addColorStop(0.48, hexToRgba(streakColor, 0.07 + warpDensity * 0.08));
+          gradient.addColorStop(0.76, hexToRgba(streakColor, 0.025 + flareIntensity * 0.035));
           gradient.addColorStop(1, hexToRgba(streakColor, 0));
           layer.ctx.fillStyle = gradient;
           layer.ctx.fillRect(-length * 0.5, -thickness * 0.5, length, thickness);
           layer.ctx.restore();
         }
 
-        for (let index = 0; index < 5; index += 1) {
-          const progress = index / 4;
+        for (let index = 0; index < 3; index += 1) {
+          const progress = index / 2;
+          paintGradientRibbon(layer.ctx, [
+            { x: width * (-0.12 + progress * 0.12), y: height * (0.86 - progress * 0.2) },
+            { x: width * (0.24 + progress * 0.18), y: height * (0.58 - progress * 0.12) },
+            { x: width * (0.7 + progress * 0.1), y: height * (0.24 + progress * 0.02) },
+            { x: width * 1.08, y: height * (0.1 + progress * 0.08) },
+          ], {
+            stops: [
+              { offset: 0, color: hexToRgba(palette.accent, 0) },
+              { offset: 0.46, color: hexToRgba(index === 1 ? palette.surface : palette.accent, 0.045 + flareIntensity * 0.035) },
+              { offset: 0.76, color: hexToRgba(palette.accentSoft, 0.028 + flareIntensity * 0.026) },
+              { offset: 1, color: hexToRgba(palette.surface, 0) },
+            ],
+            lineWidth: width * (0.065 + progress * 0.035),
+            blur: width * (0.035 + softness * 0.03),
+            composite: "screen",
+          });
+        }
+
+        for (let index = 0; index < 3; index += 1) {
+          const progress = index / 2;
           paintSoftEllipse(layer.ctx, {
             x: width * (0.16 + progress * 0.64) + (rng() - 0.5) * width * 0.1,
             y: height * (0.22 + progress * 0.56) + (rng() - 0.5) * height * 0.14,
             rx: width * (0.18 + flareIntensity * 0.14 + rng() * 0.08),
             ry: height * (0.12 + flareIntensity * 0.1 + rng() * 0.05),
             rotation: warpAngle,
-            color: hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0.14 + flareIntensity * 0.11),
-            blur: width * (0.05 + flareIntensity * 0.05),
+            color: hexToRgba(index % 2 === 0 ? palette.accent : palette.surface, 0.08 + flareIntensity * 0.07),
+            blur: width * (0.07 + flareIntensity * 0.06),
             composite: "screen",
           });
         }
 
-        for (let index = 0; index < 14; index += 1) {
+        for (let index = 0; index < 7; index += 1) {
           paintSoftEllipse(layer.ctx, {
             x: rng() * width,
             y: rng() * height,
             rx: width * (0.012 + rng() * 0.018),
             ry: height * (0.06 + rng() * 0.1),
             rotation: warpAngle + (rng() - 0.5) * 0.14,
-            color: hexToRgba(index % 2 === 0 ? palette.accentSoft : palette.surface, 0.08 + rng() * 0.1),
-            blur: width * (0.01 + rng() * 0.02),
+            color: hexToRgba(index % 2 === 0 ? palette.accentSoft : palette.surface, 0.035 + rng() * 0.045),
+            blur: width * (0.018 + rng() * 0.026),
             composite: "screen",
           });
         }
 
-        const brightBand = layer.ctx.createLinearGradient(width * 0.12, height * 0.88, width * 0.62, height * 0.18);
-        brightBand.addColorStop(0, hexToRgba(palette.accent, 0));
-        brightBand.addColorStop(0.4, hexToRgba(palette.surface, 0.14 + flareIntensity * 0.1));
-        brightBand.addColorStop(1, hexToRgba(palette.accentSoft, 0));
-        layer.ctx.save();
-        layer.ctx.strokeStyle = brightBand;
-        layer.ctx.lineWidth = width * (0.03 + flareIntensity * 0.03);
-        layer.ctx.beginPath();
-        layer.ctx.moveTo(width * 0.06, height * 0.96);
-        layer.ctx.lineTo(width * 0.62, height * 0.12);
-        layer.ctx.stroke();
-        layer.ctx.restore();
+        paintGradientRibbon(layer.ctx, [
+          { x: width * 0.04, y: height * 0.98 },
+          { x: width * 0.22, y: height * 0.72 },
+          { x: width * 0.44, y: height * 0.42 },
+          { x: width * 0.64, y: height * 0.14 },
+        ], {
+          stops: [
+            { offset: 0, color: hexToRgba(palette.accent, 0) },
+            { offset: 0.5, color: hexToRgba(palette.surface, 0.07 + flareIntensity * 0.055) },
+            { offset: 1, color: hexToRgba(palette.accentSoft, 0) },
+          ],
+          lineWidth: width * (0.052 + flareIntensity * 0.026),
+          blur: width * (0.03 + flareIntensity * 0.025),
+          composite: "screen",
+        });
 
         ctx.drawImage(layer.canvas, 0, 0);
         addVignette(ctx, width, height, palette.ink, 0.22 + warpDensity * 0.18);
@@ -3137,136 +3195,90 @@
       function drawOrbitalTetherGeometry(ctx, width, height, palette, currentState, rng) {
         const layer = createLayer(width, height);
         const warpAngle = getWarpAngleRadians(currentState);
-        const podScale = currentState.advanced.podScale ?? 0.58;
-        const tetherTension = currentState.advanced.tetherTension ?? 0.72;
+        const membraneScale = currentState.advanced.podScale ?? 0.58;
+        const curveTension = currentState.advanced.tetherTension ?? 0.72;
         const driftOffset = currentState.advanced.driftOffset ?? 0.46;
-        const blur = width * (0.012 + currentState.advanced.softness * 0.045);
-
-        const podX = width * (0.74 + podScale * 0.06);
-        const podY = height * (0.8 + podScale * 0.04);
-        const podWidth = width * (0.32 + podScale * 0.24);
-        const podHeight = height * (0.18 + podScale * 0.12);
-        const podRotation = warpAngle * 0.6 + 0.34;
-
-        layer.ctx.save();
-        layer.ctx.translate(podX, podY);
-        layer.ctx.rotate(podRotation);
-        layer.ctx.filter = "none";
-
-        const podGradient = layer.ctx.createLinearGradient(-podWidth * 0.84, 0, podWidth * 0.62, 0);
-        podGradient.addColorStop(0, hexToRgba(palette.accent, 0.88));
-        podGradient.addColorStop(0.34, hexToRgba(palette.surface, 0.98));
-        podGradient.addColorStop(0.7, hexToRgba(palette.accentSoft, 0.74));
-        podGradient.addColorStop(1, hexToRgba(palette.ink, 0.72));
-        roundedRect(layer.ctx, -podWidth * 0.68, -podHeight * 0.38, podWidth * 1.16, podHeight * 0.84, podHeight * 0.34);
-        layer.ctx.fillStyle = podGradient;
-        layer.ctx.fill();
-
-        layer.ctx.beginPath();
-        layer.ctx.ellipse(-podWidth * 0.08, -podHeight * 0.28, podWidth * 0.52, podHeight * 0.24, 0, Math.PI, 0, true);
-        layer.ctx.lineTo(podWidth * 0.44, podHeight * 0.02);
-        layer.ctx.lineTo(-podWidth * 0.6, podHeight * 0.02);
-        layer.ctx.closePath();
-        layer.ctx.fillStyle = hexToRgba(palette.surface, 0.82);
-        layer.ctx.fill();
-
-        layer.ctx.lineWidth = Math.max(1.5, width * 0.0024);
-        layer.ctx.strokeStyle = hexToRgba(palette.accentSoft, 0.38);
-        roundedRect(layer.ctx, -podWidth * 0.72, -podHeight * 0.44, podWidth * 1.2, podHeight * 0.92, podHeight * 0.38);
-        layer.ctx.stroke();
-
-        layer.ctx.beginPath();
-        layer.ctx.ellipse(-podWidth * 0.1, -podHeight * 0.26, podWidth * 0.56, podHeight * 0.26, 0, Math.PI, 0, true);
-        layer.ctx.strokeStyle = hexToRgba(palette.surface, 0.26);
-        layer.ctx.stroke();
-
-        layer.ctx.strokeStyle = hexToRgba(palette.ink, 0.22);
-        for (let index = 0; index < 4; index += 1) {
-          const y = podHeight * (0.06 + index * 0.1);
-          layer.ctx.beginPath();
-          layer.ctx.moveTo(-podWidth * 0.54, y);
-          layer.ctx.lineTo(podWidth * 0.28, y - podHeight * 0.02);
-          layer.ctx.stroke();
-        }
+        const glow = currentState.advanced.glowRadius ?? 0.72;
+        const baseX = width * (0.22 + driftOffset * 0.2);
+        const baseY = height * (0.64 + (1 - driftOffset) * 0.08);
+        const reachX = width * (0.68 + membraneScale * 0.18);
+        const reachY = height * (0.2 + curveTension * 0.12);
 
         for (let index = 0; index < 4; index += 1) {
-          const windowX = -podWidth * 0.24 + index * podWidth * 0.16;
-          layer.ctx.beginPath();
-          layer.ctx.arc(windowX, -podHeight * 0.03 + (index % 2 === 0 ? -podHeight * 0.03 : podHeight * 0.04), podHeight * 0.085, 0, Math.PI * 2);
-          layer.ctx.fillStyle = hexToRgba(index % 2 === 0 ? palette.ink : palette.accent, 0.84);
-          layer.ctx.fill();
-          layer.ctx.strokeStyle = hexToRgba(palette.surface, 0.28);
-          layer.ctx.stroke();
+          const offset = (index - 1.5) * height * (0.045 + membraneScale * 0.018);
+          const points = [
+            { x: width * -0.1, y: baseY + offset },
+            { x: width * 0.2, y: baseY - height * (0.13 + curveTension * 0.05) + offset * 0.5 },
+            { x: width * 0.5, y: height * (0.47 + (index - 1.5) * 0.045) },
+            { x: reachX, y: reachY + offset * 0.25 },
+            { x: width * 1.08, y: height * (0.14 + index * 0.045) },
+          ];
+          paintGradientRibbon(layer.ctx, points, {
+            stops: [
+              { offset: 0, color: hexToRgba(palette.accent, 0) },
+              { offset: 0.42, color: hexToRgba(index % 2 === 0 ? palette.accent : palette.accentSoft, 0.08 + glow * 0.06) },
+              { offset: 0.72, color: `rgba(255, 255, 255, ${0.035 + glow * 0.035})` },
+              { offset: 1, color: hexToRgba(palette.surface, 0) },
+            ],
+            lineWidth: width * (0.035 + membraneScale * 0.035 + index * 0.004),
+            blur: width * (0.018 + currentState.advanced.softness * 0.018),
+            composite: "screen",
+          });
         }
-
-        layer.ctx.restore();
 
         paintSoftEllipse(layer.ctx, {
-          x: podX - Math.cos(podRotation) * podWidth * 0.48,
-          y: podY - Math.sin(podRotation) * podHeight * 0.28,
-          rx: width * 0.12,
-          ry: height * 0.08,
-          rotation: podRotation,
-          color: hexToRgba(palette.accent, 0.16 + currentState.advanced.glowRadius * 0.08),
-          blur: width * 0.05,
+          x: width * (0.44 + driftOffset * 0.18),
+          y: height * 0.58,
+          rx: width * (0.24 + membraneScale * 0.1),
+          ry: height * 0.28,
+          rotation: warpAngle * 0.36,
+          color: hexToRgba(palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.035),
+          blur: width * 0.08,
+          composite: "multiply",
+        });
+
+        paintSoftEllipse(layer.ctx, {
+          x: width * (0.58 + driftOffset * 0.12),
+          y: height * (0.34 + curveTension * 0.08),
+          rx: width * (0.18 + glow * 0.08),
+          ry: height * (0.12 + membraneScale * 0.08),
+          rotation: warpAngle * 0.6,
+          color: hexToRgba(palette.accentSoft, 0.085 + glow * 0.055),
+          blur: width * 0.06,
           composite: "screen",
         });
 
-        const bodyX = width * (0.3 + driftOffset * 0.26);
-        const bodyY = height * (0.18 + (1 - driftOffset) * 0.18);
-        const controlX = width * (0.48 + tetherTension * 0.1);
-        const controlY = height * (0.5 - tetherTension * 0.2);
-        const anchorX = podX - Math.cos(podRotation) * podWidth * 0.56;
-        const anchorY = podY - Math.sin(podRotation) * podHeight * 0.5;
-
-        layer.ctx.save();
-        layer.ctx.lineCap = "round";
-        layer.ctx.strokeStyle = hexToRgba(palette.accent, 0.36);
-        layer.ctx.lineWidth = Math.max(1.1, width * 0.0014);
-        layer.ctx.beginPath();
-        layer.ctx.moveTo(bodyX, bodyY);
-        layer.ctx.quadraticCurveTo(controlX, controlY, anchorX, anchorY);
-        layer.ctx.stroke();
-        layer.ctx.strokeStyle = hexToRgba(palette.surface, 0.12);
-        layer.ctx.lineWidth = Math.max(2.2, width * 0.0026);
-        layer.ctx.stroke();
-        layer.ctx.restore();
-
-        layer.ctx.save();
-        layer.ctx.translate(bodyX, bodyY);
-        layer.ctx.rotate(warpAngle * 0.5 - 0.38);
-        roundedRect(layer.ctx, -width * 0.01, -height * 0.014, width * 0.02, height * 0.028, width * 0.009);
-        layer.ctx.fillStyle = hexToRgba(palette.accent, 0.92);
-        layer.ctx.fill();
-        layer.ctx.beginPath();
-        layer.ctx.arc(0, -height * 0.02, width * 0.006, 0, Math.PI * 2);
-        layer.ctx.fillStyle = hexToRgba(palette.surface, 0.94);
-        layer.ctx.fill();
-        layer.ctx.strokeStyle = hexToRgba(palette.surface, 0.82);
-        layer.ctx.lineWidth = Math.max(1, width * 0.0012);
-        layer.ctx.beginPath();
-        layer.ctx.moveTo(-width * 0.018, -height * 0.002);
-        layer.ctx.lineTo(width * 0.018, height * 0.004);
-        layer.ctx.moveTo(-width * 0.014, height * 0.01);
-        layer.ctx.lineTo(-width * 0.004, height * 0.026);
-        layer.ctx.moveTo(width * 0.012, height * 0.008);
-        layer.ctx.lineTo(width * 0.003, height * 0.026);
-        layer.ctx.stroke();
-        layer.ctx.restore();
-
         paintSoftEllipse(layer.ctx, {
-          x: bodyX,
-          y: bodyY,
-          rx: width * 0.028,
-          ry: height * 0.03,
-          rotation: 0,
-          color: hexToRgba(palette.surface, 0.18 + currentState.advanced.glowRadius * 0.08),
-          blur: width * 0.02,
+          x: width * (0.32 + driftOffset * 0.06),
+          y: height * 0.58,
+          rx: width * (0.18 + membraneScale * 0.08),
+          ry: height * 0.18,
+          rotation: warpAngle * 0.42,
+          color: hexToRgba(palette.surface, 0.025 + glow * 0.02),
+          blur: width * 0.07,
           composite: "screen",
         });
+
+        for (let index = 0; index < 5; index += 1) {
+          const progress = index / 4;
+          paintGradientRibbon(layer.ctx, [
+            { x: width * (0.1 + progress * 0.18), y: height * (0.92 - progress * 0.2) },
+            { x: width * (0.36 + progress * 0.12), y: height * (0.64 - progress * 0.14) },
+            { x: width * (0.64 + progress * 0.08), y: height * (0.36 - progress * 0.05) },
+          ], {
+            stops: [
+              { offset: 0, color: hexToRgba(palette.accent, 0) },
+              { offset: 0.48, color: hexToRgba(progress > 0.45 ? palette.accentSoft : palette.accent, 0.025 + glow * 0.03) },
+              { offset: 1, color: hexToRgba(palette.surface, 0) },
+            ],
+            lineWidth: Math.max(1, width * (0.003 + progress * 0.002)),
+            blur: width * 0.003,
+            composite: "screen",
+          });
+        }
 
         ctx.drawImage(layer.canvas, 0, 0);
-        addVignette(ctx, width, height, palette.ink, 0.1 + currentState.advanced.tonalSplit * 0.12);
+        addVignette(ctx, width, height, palette.ink, 0.16 + currentState.advanced.tonalSplit * 0.12);
       }
 
       function buildReededFieldComposition(width, height, currentState, rng) {
@@ -3777,23 +3789,23 @@
         if (currentState.shapeMode === "orbital-tether") {
           const warpAngle = getWarpAngleRadians(currentState);
           paintSoftEllipse(ctx, {
-            x: width * 0.76,
-            y: height * 0.9,
-            rx: width * 0.22,
-            ry: height * 0.08,
+            x: width * 0.62,
+            y: height * 0.74,
+            rx: width * 0.32,
+            ry: height * 0.1,
             rotation: warpAngle * 0.55,
-            color: hexToRgba(palette.accent, 0.08 + (currentState.advanced.glowRadius ?? 0.55) * 0.08),
-            blur: width * 0.05,
+            color: hexToRgba(palette.accent, 0.04 + (currentState.advanced.glowRadius ?? 0.55) * 0.045),
+            blur: width * 0.07,
             composite: "screen",
           });
           paintSoftEllipse(ctx, {
-            x: width * (0.28 + (currentState.advanced.driftOffset ?? 0.46) * 0.24),
-            y: height * (0.22 + (1 - (currentState.advanced.driftOffset ?? 0.46)) * 0.12),
-            rx: width * 0.06,
-            ry: height * 0.04,
+            x: width * (0.36 + (currentState.advanced.driftOffset ?? 0.46) * 0.2),
+            y: height * (0.24 + (1 - (currentState.advanced.driftOffset ?? 0.46)) * 0.1),
+            rx: width * 0.16,
+            ry: height * 0.06,
             rotation: warpAngle * 0.4,
-            color: hexToRgba(palette.accentSoft, 0.08 + (currentState.advanced.tetherTension ?? 0.72) * 0.06),
-            blur: width * 0.02,
+            color: hexToRgba(palette.accentSoft, 0.04 + (currentState.advanced.tetherTension ?? 0.72) * 0.035),
+            blur: width * 0.04,
             composite: "screen",
           });
         }
@@ -3822,7 +3834,7 @@
         }
 
         if (currentState.textureMode === "light-grid") {
-          const patternAlpha = 0.014 + (currentState.advanced.patternStrength ?? 0.26) * 0.075;
+          const patternAlpha = 0.008 + (currentState.advanced.patternStrength ?? 0.26) * 0.045;
           const spacing = width * (0.06 + (1 - currentState.density) * 0.06);
           drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
         }
@@ -3857,30 +3869,31 @@
           const sparkDensity = currentState.advanced.sparkDensity ?? 0.42;
           const sparkSharpness = currentState.advanced.sparkSharpness ?? 0.68;
           const warpAngle = getWarpAngleRadians(currentState);
-          const pointCount = Math.round(width * height * (0.000018 + sparkDensity * 0.00009));
+          const pointCount = Math.round(width * height * (0.000012 + sparkDensity * 0.000045));
 
           ctx.save();
+          ctx.globalCompositeOperation = "screen";
           for (let index = 0; index < pointCount; index += 1) {
             const x = rng() * width;
             const y = rng() * height;
-            const alpha = 0.16 + rng() * 0.48;
-            const size = 0.5 + rng() * (1.2 + sparkSharpness * 1.6);
+            const alpha = 0.05 + rng() * 0.2;
+            const size = 0.35 + rng() * (0.55 + sparkSharpness * 0.6);
             ctx.fillStyle = index % 7 === 0
-              ? hexToRgba(palette.accentSoft, alpha * 0.7)
+              ? hexToRgba(palette.accentSoft, alpha * 0.6)
               : index % 5 === 0
-                ? hexToRgba(palette.accent, alpha * 0.8)
-                : `rgba(255,255,255,${alpha})`;
+                ? hexToRgba(palette.accent, alpha * 0.44)
+                : `rgba(255,255,255,${alpha * 0.72})`;
             ctx.fillRect(x, y, size, size);
 
-            if (rng() < 0.22 + sparkDensity * 0.3) {
-              const length = width * (0.005 + sparkSharpness * 0.016) * (0.4 + rng());
+            if (rng() < 0.1 + sparkDensity * 0.16) {
+              const length = width * (0.003 + sparkSharpness * 0.01) * (0.35 + rng());
               ctx.save();
               ctx.translate(x, y);
-              ctx.rotate(warpAngle + (rng() - 0.5) * 0.24);
+              ctx.rotate(warpAngle + (rng() - 0.5) * 0.18);
               ctx.strokeStyle = index % 6 === 0
-                ? hexToRgba(palette.accentSoft, alpha * 0.52)
-                : `rgba(255,255,255,${alpha * 0.72})`;
-              ctx.lineWidth = 0.8 + sparkSharpness * 1.1;
+                ? hexToRgba(palette.accentSoft, alpha * 0.3)
+                : `rgba(255,255,255,${alpha * 0.36})`;
+              ctx.lineWidth = 0.45 + sparkSharpness * 0.45;
               ctx.beginPath();
               ctx.moveTo(-length * 0.5, 0);
               ctx.lineTo(length * 0.5, 0);
