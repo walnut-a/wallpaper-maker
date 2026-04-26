@@ -1089,18 +1089,18 @@
             },
           ],
         },
-        "contour-lines": {
-          label: "等高线",
+        "satin-flow": {
+          label: "柔光流纹",
           defaults: {
-            patternStrength: 0.46,
-            contourScale: 0.46,
+            patternStrength: 0.44,
+            satinScale: 0.62,
           },
           groups: [
             {
               title: "纹理控制",
               controls: [
-                { key: "patternStrength", label: "纹理强度", min: 0.06, max: 0.72, step: 0.01, format: "percent" },
-                { key: "contourScale", label: "线距尺度", min: 0.12, max: 0.86, step: 0.01, format: "percent" },
+                { key: "patternStrength", label: "光膜强度", min: 0.04, max: 0.74, step: 0.01, format: "percent" },
+                { key: "satinScale", label: "流纹尺度", min: 0.14, max: 0.9, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1187,10 +1187,10 @@
         },
         "tech-texture": {
           label: "科技纹理感",
-          note: "不是靠线束堆科技感，而是靠深色场、模糊光斑和轻等高线。",
+          note: "靠深色场、柔光流纹和细微颗粒，做抽象的冷感质感。",
           backgroundMode: "deep-cold",
           shapeMode: "minimal-form",
-          textureMode: "contour-lines",
+          textureMode: "satin-flow",
           defaults: {
             palette: "dusk",
             density: 0.64,
@@ -1201,8 +1201,8 @@
               glowRadius: 0.58,
               tonalSplit: 0.62,
               grainFine: 0.18,
-              patternStrength: 0.46,
-              contourScale: 0.46,
+              patternStrength: 0.44,
+              satinScale: 0.62,
               vignette: 0.56,
             },
           },
@@ -1698,7 +1698,7 @@
       const mixCompatibility = {
         "minimal-form": {
           backgrounds: ["soft-atmosphere", "deep-cold", "warm-cool-split"],
-          textures: ["light-grid", "contour-lines", "fine-grain"],
+          textures: ["light-grid", "satin-flow", "fine-grain"],
         },
         "soft-blocks": {
           backgrounds: ["warm-cool-split", "soft-atmosphere"],
@@ -2449,48 +2449,104 @@
         ctx.restore();
       }
 
-      function drawContourPattern(ctx, width, height, palette, currentState, rng) {
-        const strength = currentState.advanced.patternStrength ?? 0.34;
-        const scale = currentState.advanced.contourScale ?? 0.46;
-        const lineGap = height * (0.055 + (1 - scale) * 0.045);
-        const drift = width * (0.018 + strength * 0.05);
-        const sampleCount = 12;
-        const familyCount = 2 + Math.round(strength * 3);
+      function drawSatinFlowTexture(ctx, width, height, palette, currentState, rng) {
+        const strength = currentState.advanced.patternStrength ?? 0.44;
+        const scale = currentState.advanced.satinScale ?? 0.62;
+        const bandCount = 3 + Math.round(strength * 3);
+        const amplitude = height * (0.024 + scale * 0.06);
+        const layer = createLayer(width, height);
 
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.filter = `blur(${width * 0.0015}px)`;
-
-        for (let family = 0; family < familyCount; family += 1) {
-          const offset = (family - (familyCount - 1) / 2) * lineGap * 0.32;
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "screen";
+        for (let band = 0; band < bandCount; band += 1) {
+          const progress = bandCount === 1 ? 0.5 : band / (bandCount - 1);
+          const baseY = height * (0.18 + progress * 0.62) + (rng() - 0.5) * height * 0.08;
           const phase = rng() * Math.PI * 2;
-          const alpha = (0.026 + strength * 0.055) * (1 - family * 0.12);
-          ctx.strokeStyle = family % 2 === 0
-            ? hexToRgba(palette.accentSoft, alpha)
-            : `rgba(255,255,255,${alpha * 0.74})`;
-          ctx.lineWidth = Math.max(0.8, width * (0.0012 + strength * 0.0016));
+          const tilt = (rng() - 0.5) * height * 0.12;
+          const points = [];
 
-          for (let y = -lineGap; y <= height + lineGap; y += lineGap) {
-            ctx.beginPath();
-            for (let index = 0; index <= sampleCount; index += 1) {
-              const t = index / sampleCount;
-              const x = width * t;
-              const bend = Math.sin(t * Math.PI * (1.6 + scale * 1.5) + phase) * drift
-                + Math.sin(t * Math.PI * (3.2 + family * 0.36) + phase * 0.7) * drift * 0.38;
-              const localY = y + offset + bend + Math.sin((y / Math.max(lineGap, 1)) + phase) * lineGap * 0.08;
-              if (index === 0) {
-                ctx.moveTo(x, localY);
-              } else {
-                ctx.lineTo(x, localY);
-              }
-            }
-            ctx.stroke();
+          for (let step = 0; step <= 8; step += 1) {
+            const t = step / 8;
+            const slowWave = Math.sin(t * Math.PI * (0.85 + scale * 1.1) + phase) * amplitude;
+            const fineWave = Math.sin(t * Math.PI * (2.1 + strength * 1.2) + phase * 0.45) * amplitude * 0.24;
+            points.push({
+              x: width * (-0.08 + t * 1.16),
+              y: baseY + slowWave + fineWave + (t - 0.5) * tilt,
+            });
           }
-        }
 
-        ctx.restore();
+          paintGradientRibbon(layer.ctx, points, {
+            stops: [
+              { offset: 0, color: "rgba(255, 255, 255, 0)" },
+              { offset: 0.24, color: hexToRgba(palette.accentSoft, 0.034 + strength * 0.07) },
+              { offset: 0.52, color: `rgba(255, 255, 255, ${0.026 + strength * 0.06})` },
+              { offset: 0.78, color: hexToRgba(palette.surface, 0.024 + strength * 0.05) },
+              { offset: 1, color: "rgba(255, 255, 255, 0)" },
+            ],
+            lineWidth: width * (0.035 + strength * 0.052) * (0.82 + rng() * 0.36),
+            blur: width * (0.009 + (1 - scale) * 0.017),
+            composite: "screen",
+          });
+        }
+        layer.ctx.restore();
+
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "soft-light";
+        const horizontalSheen = layer.ctx.createLinearGradient(0, 0, width, 0);
+        horizontalSheen.addColorStop(0, hexToRgba(palette.ink, 0.05 + strength * 0.04));
+        horizontalSheen.addColorStop(0.28, `rgba(255, 255, 255, ${0.018 + strength * 0.035})`);
+        horizontalSheen.addColorStop(0.52, hexToRgba(palette.accentSoft, 0.02 + strength * 0.035));
+        horizontalSheen.addColorStop(0.76, `rgba(255, 255, 255, ${0.012 + strength * 0.026})`);
+        horizontalSheen.addColorStop(1, hexToRgba(palette.ink, 0.04 + strength * 0.035));
+        layer.ctx.fillStyle = horizontalSheen;
+        layer.ctx.fillRect(0, 0, width, height);
+        layer.ctx.restore();
+
+        const film = document.createElement("canvas");
+        film.width = 84;
+        film.height = 148;
+        const filmCtx = film.getContext("2d", { alpha: true });
+        const filmData = filmCtx.createImageData(film.width, film.height);
+        for (let index = 0; index < filmData.data.length; index += 4) {
+          const value = 82 + Math.floor(rng() * 120);
+          filmData.data[index] = value;
+          filmData.data[index + 1] = value;
+          filmData.data[index + 2] = value;
+          filmData.data[index + 3] = 12 + Math.floor(strength * 34);
+        }
+        filmCtx.putImageData(filmData, 0, 0);
+
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "soft-light";
+        layer.ctx.globalAlpha = 0.18 + strength * 0.18;
+        layer.ctx.imageSmoothingEnabled = true;
+        layer.ctx.filter = `blur(${Math.max(1, width * 0.0014)}px)`;
+        layer.ctx.drawImage(film, 0, 0, width, height);
+        layer.ctx.restore();
+
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "multiply";
+        for (let band = 0; band < 2; band += 1) {
+          const baseY = height * (0.34 + band * 0.24) + (rng() - 0.5) * height * 0.08;
+          const points = [];
+          const phase = rng() * Math.PI * 2;
+          for (let step = 0; step <= 7; step += 1) {
+            const t = step / 7;
+            points.push({
+              x: width * (-0.05 + t * 1.1),
+              y: baseY + Math.sin(t * Math.PI * (1.2 + scale) + phase) * amplitude * 0.48,
+            });
+          }
+          paintSoftRibbon(layer.ctx, points, {
+            color: hexToRgba(palette.ink, 0.018 + strength * 0.04),
+            lineWidth: width * (0.055 + strength * 0.05),
+            blur: width * (0.026 + scale * 0.018),
+            composite: "multiply",
+          });
+        }
+        layer.ctx.restore();
+
+        ctx.drawImage(layer.canvas, 0, 0);
       }
 
       function drawReededGlassPattern(ctx, width, height, palette, density, contrast) {
@@ -3947,7 +4003,7 @@
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        if (currentState.shapeMode === "minimal-form" && currentState.backgroundMode !== "deep-cold" && currentState.textureMode !== "contour-lines") {
+        if (currentState.shapeMode === "minimal-form" && currentState.backgroundMode !== "deep-cold" && currentState.textureMode !== "satin-flow") {
           paintSoftEllipse(ctx, {
             x: width * (0.28 + (currentState.advanced.lightDrift ?? 0.5) * 0.22),
             y: height * 0.18,
@@ -3969,7 +4025,7 @@
             blur: width * 0.025,
           });
         }
-        if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "contour-lines") {
+        if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "satin-flow") {
           const glow = currentState.advanced.glowRadius ?? 0.5;
           paintSoftEllipse(ctx, {
             x: width * 0.46,
@@ -4083,7 +4139,7 @@
 
       function drawTextureLayer(ctx, width, height, palette, currentState, rng) {
         const fineGrain = currentState.advanced.grainFine ?? 0.14;
-        const noiseIntensity = currentState.textureMode === "contour-lines"
+        const noiseIntensity = currentState.textureMode === "satin-flow"
           ? 0.045 + fineGrain * 0.2
           : currentState.textureMode === "light-grid"
             ? 0.05 + fineGrain * 0.35
@@ -4108,8 +4164,8 @@
           drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
         }
 
-        if (currentState.textureMode === "contour-lines") {
-          drawContourPattern(ctx, width, height, palette, currentState, rng);
+        if (currentState.textureMode === "satin-flow") {
+          drawSatinFlowTexture(ctx, width, height, palette, currentState, rng);
         }
 
         if (currentState.textureMode === "prism-glass") {
@@ -4175,7 +4231,7 @@
       function drawShapeMode(ctx, width, height, palette, currentState, rng) {
         switch (currentState.shapeMode) {
           case "minimal-form":
-            if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "contour-lines") {
+            if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "satin-flow") {
               drawTechGeometry(ctx, width, height, palette, currentState, rng);
             } else {
               drawMinimalGeometry(ctx, width, height, palette, currentState, rng);
