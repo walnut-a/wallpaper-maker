@@ -1089,18 +1089,18 @@
             },
           ],
         },
-        honeycomb: {
-          label: "蜂窝",
+        "contour-lines": {
+          label: "等高线",
           defaults: {
-            patternStrength: 0.6,
-            cellScale: 0.46,
+            patternStrength: 0.46,
+            contourScale: 0.46,
           },
           groups: [
             {
               title: "纹理控制",
               controls: [
-                { key: "patternStrength", label: "底纹强度", min: 0.1, max: 0.88, step: 0.01, format: "percent" },
-                { key: "cellScale", label: "蜂窝尺度", min: 0.12, max: 0.82, step: 0.01, format: "percent" },
+                { key: "patternStrength", label: "纹理强度", min: 0.06, max: 0.72, step: 0.01, format: "percent" },
+                { key: "contourScale", label: "线距尺度", min: 0.12, max: 0.86, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1187,10 +1187,10 @@
         },
         "tech-texture": {
           label: "科技纹理感",
-          note: "不是靠线束堆科技感，而是靠深色场、模糊光斑和轻蜂窝。",
+          note: "不是靠线束堆科技感，而是靠深色场、模糊光斑和轻等高线。",
           backgroundMode: "deep-cold",
           shapeMode: "minimal-form",
-          textureMode: "honeycomb",
+          textureMode: "contour-lines",
           defaults: {
             palette: "dusk",
             density: 0.64,
@@ -1201,8 +1201,8 @@
               glowRadius: 0.58,
               tonalSplit: 0.62,
               grainFine: 0.18,
-              patternStrength: 0.6,
-              cellScale: 0.46,
+              patternStrength: 0.46,
+              contourScale: 0.46,
               vignette: 0.56,
             },
           },
@@ -1698,7 +1698,7 @@
       const mixCompatibility = {
         "minimal-form": {
           backgrounds: ["soft-atmosphere", "deep-cold", "warm-cool-split"],
-          textures: ["light-grid", "honeycomb", "fine-grain"],
+          textures: ["light-grid", "contour-lines", "fine-grain"],
         },
         "soft-blocks": {
           backgrounds: ["warm-cool-split", "soft-atmosphere"],
@@ -2449,32 +2449,47 @@
         ctx.restore();
       }
 
-      function drawHexPattern(ctx, width, height, side, color, alpha) {
-        const hexHeight = Math.sqrt(3) * side;
-        const columnStep = side * 1.5;
+      function drawContourPattern(ctx, width, height, palette, currentState, rng) {
+        const strength = currentState.advanced.patternStrength ?? 0.34;
+        const scale = currentState.advanced.contourScale ?? 0.46;
+        const lineGap = height * (0.055 + (1 - scale) * 0.045);
+        const drift = width * (0.018 + strength * 0.05);
+        const sampleCount = 12;
+        const familyCount = 2 + Math.round(strength * 3);
+
         ctx.save();
-        ctx.strokeStyle = hexToRgba(color, alpha);
-        ctx.lineWidth = 1;
-        for (let column = -2; column < Math.ceil(width / columnStep) + 2; column += 1) {
-          const centerX = column * columnStep;
-          const offsetY = column % 2 === 0 ? 0 : hexHeight * 0.5;
-          for (let row = -2; row < Math.ceil(height / hexHeight) + 2; row += 1) {
-            const centerY = row * hexHeight + offsetY;
+        ctx.globalCompositeOperation = "screen";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.filter = `blur(${width * 0.0015}px)`;
+
+        for (let family = 0; family < familyCount; family += 1) {
+          const offset = (family - (familyCount - 1) / 2) * lineGap * 0.32;
+          const phase = rng() * Math.PI * 2;
+          const alpha = (0.026 + strength * 0.055) * (1 - family * 0.12);
+          ctx.strokeStyle = family % 2 === 0
+            ? hexToRgba(palette.accentSoft, alpha)
+            : `rgba(255,255,255,${alpha * 0.74})`;
+          ctx.lineWidth = Math.max(0.8, width * (0.0012 + strength * 0.0016));
+
+          for (let y = -lineGap; y <= height + lineGap; y += lineGap) {
             ctx.beginPath();
-            for (let point = 0; point < 6; point += 1) {
-              const angle = (Math.PI / 180) * (60 * point - 30);
-              const x = centerX + side * Math.cos(angle);
-              const y = centerY + side * Math.sin(angle);
-              if (point === 0) {
-                ctx.moveTo(x, y);
+            for (let index = 0; index <= sampleCount; index += 1) {
+              const t = index / sampleCount;
+              const x = width * t;
+              const bend = Math.sin(t * Math.PI * (1.6 + scale * 1.5) + phase) * drift
+                + Math.sin(t * Math.PI * (3.2 + family * 0.36) + phase * 0.7) * drift * 0.38;
+              const localY = y + offset + bend + Math.sin((y / Math.max(lineGap, 1)) + phase) * lineGap * 0.08;
+              if (index === 0) {
+                ctx.moveTo(x, localY);
               } else {
-                ctx.lineTo(x, y);
+                ctx.lineTo(x, localY);
               }
             }
-            ctx.closePath();
             ctx.stroke();
           }
         }
+
         ctx.restore();
       }
 
@@ -3932,7 +3947,7 @@
       function drawAccentLayer(ctx, width, height, palette, currentState, rng) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        if (currentState.shapeMode === "minimal-form" && currentState.backgroundMode !== "deep-cold" && currentState.textureMode !== "honeycomb") {
+        if (currentState.shapeMode === "minimal-form" && currentState.backgroundMode !== "deep-cold" && currentState.textureMode !== "contour-lines") {
           paintSoftEllipse(ctx, {
             x: width * (0.28 + (currentState.advanced.lightDrift ?? 0.5) * 0.22),
             y: height * 0.18,
@@ -3954,7 +3969,7 @@
             blur: width * 0.025,
           });
         }
-        if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "honeycomb") {
+        if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "contour-lines") {
           const glow = currentState.advanced.glowRadius ?? 0.5;
           paintSoftEllipse(ctx, {
             x: width * 0.46,
@@ -4068,8 +4083,8 @@
 
       function drawTextureLayer(ctx, width, height, palette, currentState, rng) {
         const fineGrain = currentState.advanced.grainFine ?? 0.14;
-        const noiseIntensity = currentState.textureMode === "honeycomb"
-          ? 0.09 + currentState.complexity * 0.04
+        const noiseIntensity = currentState.textureMode === "contour-lines"
+          ? 0.045 + fineGrain * 0.2
           : currentState.textureMode === "light-grid"
             ? 0.05 + fineGrain * 0.35
             : currentState.textureMode === "prism-glass"
@@ -4093,16 +4108,8 @@
           drawGridPattern(ctx, width, height, spacing, palette.ink, patternAlpha);
         }
 
-        if (currentState.textureMode === "honeycomb") {
-          const step = 7 + currentState.advanced.patternStrength * 12;
-          ctx.strokeStyle = hexToRgba(palette.accentSoft, 0.06);
-          ctx.lineWidth = 1;
-          for (let y = 0; y < height; y += step) {
-            line(ctx, 0, y, width, y);
-          }
-          const side = width * (0.012 + currentState.advanced.cellScale * 0.02);
-          drawHexPattern(ctx, width, height, side, palette.accentSoft, 0.06 + currentState.advanced.patternStrength * 0.08);
-          drawHexPattern(ctx, width, height, side, palette.ink, 0.14 + currentState.advanced.patternStrength * 0.18);
+        if (currentState.textureMode === "contour-lines") {
+          drawContourPattern(ctx, width, height, palette, currentState, rng);
         }
 
         if (currentState.textureMode === "prism-glass") {
@@ -4168,7 +4175,7 @@
       function drawShapeMode(ctx, width, height, palette, currentState, rng) {
         switch (currentState.shapeMode) {
           case "minimal-form":
-            if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "honeycomb") {
+            if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "contour-lines") {
               drawTechGeometry(ctx, width, height, palette, currentState, rng);
             } else {
               drawMinimalGeometry(ctx, width, height, palette, currentState, rng);
