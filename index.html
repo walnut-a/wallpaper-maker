@@ -3400,7 +3400,7 @@
         const refractionField = currentState.advanced.refractionField ?? 0.48;
         const glassDepth = currentState.advanced.glassDepth ?? 0.58;
         const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
-        const step = width * (0.018 + (1 - ridgeDensity) * 0.034);
+        const step = width * (0.052 + (1 - ridgeDensity) * 0.052);
         const samplesPerRidge = 8;
         const baseShift = width * (0.004 + refractionField * 0.014 + glassDepth * 0.006);
 
