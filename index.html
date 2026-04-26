@@ -3321,6 +3321,186 @@
         });
       }
 
+      const reededMaterialAsset = {
+        image: null,
+        ready: false,
+        loading: false,
+      };
+
+      function buildReededMaterialSvg() {
+        return `
+          <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+            <defs>
+              <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#0d1420" stop-opacity="0.08"/>
+                <stop offset="0.14" stop-color="#ffffff" stop-opacity="0.08"/>
+                <stop offset="0.38" stop-color="#ffffff" stop-opacity="0.2"/>
+                <stop offset="0.55" stop-color="#9ec4d7" stop-opacity="0.06"/>
+                <stop offset="0.76" stop-color="#ffffff" stop-opacity="0.13"/>
+                <stop offset="0.92" stop-color="#0d1420" stop-opacity="0.07"/>
+                <stop offset="1" stop-color="#0d1420" stop-opacity="0.11"/>
+              </linearGradient>
+              <pattern id="reed" width="92" height="1920" patternUnits="userSpaceOnUse">
+                <rect width="92" height="1920" fill="url(#ridge)"/>
+                <rect x="43" width="5" height="1920" fill="#ffffff" opacity="0.14"/>
+                <rect x="4" width="2" height="1920" fill="#101522" opacity="0.06"/>
+                <rect x="82" width="2.5" height="1920" fill="#ffffff" opacity="0.08"/>
+              </pattern>
+              <filter id="soften" x="-8%" y="-2%" width="116%" height="104%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.018 0.24" numOctaves="2" seed="11" result="grain"/>
+                <feDisplacementMap in="SourceGraphic" in2="grain" scale="5" xChannelSelector="R" yChannelSelector="G" result="ripple"/>
+                <feGaussianBlur in="ripple" stdDeviation="0.42"/>
+              </filter>
+              <linearGradient id="verticalVeil" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0.14"/>
+                <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.04"/>
+                <stop offset="0.48" stop-color="#ffffff" stop-opacity="0"/>
+                <stop offset="0.82" stop-color="#0b1020" stop-opacity="0.1"/>
+                <stop offset="1" stop-color="#0b1020" stop-opacity="0.24"/>
+              </linearGradient>
+              <radialGradient id="wideSpecular" cx="48%" cy="38%" r="58%">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+                <stop offset="0.42" stop-color="#ffffff" stop-opacity="0.08"/>
+                <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="1080" height="1920" fill="url(#reed)" filter="url(#soften)" opacity="0.76"/>
+            <rect width="1080" height="1920" fill="url(#verticalVeil)"/>
+            <rect width="1080" height="1920" fill="url(#wideSpecular)" opacity="0.58"/>
+          </svg>
+        `;
+      }
+
+      function ensureReededMaterialAsset() {
+        if (reededMaterialAsset.ready || reededMaterialAsset.loading) {
+          return reededMaterialAsset;
+        }
+        reededMaterialAsset.loading = true;
+        const image = new Image();
+        image.decoding = "async";
+        image.onload = () => {
+          reededMaterialAsset.ready = true;
+          reededMaterialAsset.loading = false;
+          queueRender();
+          if (state.shapeMode === "reeded-column") {
+            refreshCandidates({ silent: true });
+          }
+        };
+        image.onerror = () => {
+          reededMaterialAsset.loading = false;
+        };
+        image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildReededMaterialSvg())}`;
+        reededMaterialAsset.image = image;
+        return reededMaterialAsset;
+      }
+
+      function drawReededColumnDisplacement(ctx, sourceCanvas, width, height, palette, currentState, composition) {
+        const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
+        const ridgeBreath = currentState.advanced.ridgeBreath ?? 0.36;
+        const refractionField = currentState.advanced.refractionField ?? 0.48;
+        const glassDepth = currentState.advanced.glassDepth ?? 0.58;
+        const fieldBlend = currentState.advanced.fieldBlend ?? 0.5;
+        const step = width * (0.018 + (1 - ridgeDensity) * 0.034);
+        const samplesPerRidge = 8;
+        const baseShift = width * (0.004 + refractionField * 0.014 + glassDepth * 0.006);
+
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(sourceCanvas, 0, 0, width, height);
+        for (let x = -step; x < width + step * 2; x += step) {
+          const normalized = x / Math.max(step, 1);
+          const localWidth = step * (1.04 + Math.sin(composition.basePhase + normalized * 0.24) * ridgeBreath * 0.05);
+          const sliceWidth = localWidth / samplesPerRidge;
+          let focusShift = 0;
+          composition.focusZones.forEach((zone) => {
+            const influence = gaussianInfluence(x, zone.x, zone.width * 0.7);
+            focusShift += influence * zone.drift * 0.2;
+          });
+
+          for (let sample = 0; sample < samplesPerRidge; sample += 1) {
+            const t = (sample + 0.5) / samplesPerRidge;
+            const localX = x + sample * sliceWidth;
+            const ridgeNormal = Math.sin((t - 0.5) * Math.PI);
+            const ridgeLens = Math.cos((t - 0.5) * Math.PI);
+            const sourceShift = ridgeNormal * baseShift * (1.08 - ridgeLens * 0.28) + focusShift;
+            const verticalDrift = Math.sin(composition.refractionPhase + (localX / Math.max(width, 1)) * Math.PI * 3) * height * 0.0012 * fieldBlend;
+            const sx = clamp(localX + sourceShift, 0, Math.max(0, width - sliceWidth));
+            const sy = clamp(verticalDrift, -height * 0.01, height * 0.01);
+            const sourceHeight = height - Math.abs(sy);
+            const sourceY = sy > 0 ? sy : 0;
+            const targetY = sy > 0 ? 0 : -sy;
+            ctx.drawImage(sourceCanvas, sx, sourceY, sliceWidth, sourceHeight, localX, targetY, sliceWidth, sourceHeight);
+          }
+        }
+        ctx.restore();
+
+        const ridgeOverlay = createLayer(width, height);
+        ridgeOverlay.ctx.save();
+        ridgeOverlay.ctx.globalCompositeOperation = "soft-light";
+        ridgeOverlay.ctx.globalAlpha = 0.42;
+        for (let x = -step; x < width + step * 2; x += step) {
+          const localWidth = step * 0.92;
+          const gradient = ridgeOverlay.ctx.createLinearGradient(x, 0, x + localWidth, 0);
+          gradient.addColorStop(0, hexToRgba(palette.ink, 0.045 + glassDepth * 0.035));
+          gradient.addColorStop(0.18, `rgba(255,255,255,${0.04 + glassDepth * 0.035})`);
+          gradient.addColorStop(0.42, `rgba(255,255,255,${0.09 + glassDepth * 0.07})`);
+          gradient.addColorStop(0.62, hexToRgba(palette.surface, 0.024 + refractionField * 0.032));
+          gradient.addColorStop(0.82, `rgba(255,255,255,${0.045 + glassDepth * 0.04})`);
+          gradient.addColorStop(1, hexToRgba(palette.ink, 0.04 + glassDepth * 0.035));
+          ridgeOverlay.ctx.fillStyle = gradient;
+          ridgeOverlay.ctx.fillRect(x, 0, localWidth, height);
+        }
+        ridgeOverlay.ctx.restore();
+        ctx.drawImage(ridgeOverlay.canvas, 0, 0);
+      }
+
+      function drawReededSvgMaterial(ctx, width, height, palette, currentState, composition) {
+        const asset = ensureReededMaterialAsset();
+        const depth = currentState.advanced.glassDepth ?? 0.58;
+        const refractionField = currentState.advanced.refractionField ?? 0.48;
+        const focusStrength = currentState.advanced.focusField ?? 0.54;
+
+        if (asset.ready && asset.image) {
+          ctx.save();
+          ctx.globalCompositeOperation = "soft-light";
+          ctx.globalAlpha = 0.34 + depth * 0.16;
+          ctx.drawImage(asset.image, 0, 0, width, height);
+          ctx.restore();
+
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.globalAlpha = 0.1 + depth * 0.08;
+          ctx.drawImage(asset.image, 0, 0, width, height);
+          ctx.restore();
+        } else {
+          drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
+        }
+
+        composition.focusZones.forEach((zone, index) => {
+          paintSoftRoundedRect(ctx, {
+            x: zone.x - zone.width * 0.44 + zone.drift * 0.16,
+            y: height * (0.025 + index * 0.04),
+            width: zone.width * (0.5 + focusStrength * 0.22),
+            height: height * 0.93,
+            radius: zone.width * 0.32,
+            color: `rgba(255, 255, 255, ${0.035 + zone.intensity * 0.07 + depth * 0.03})`,
+            blur: width * (0.026 + depth * 0.032),
+            composite: "screen",
+          });
+        });
+
+        paintSoftEllipse(ctx, {
+          x: width * 0.52,
+          y: height * 0.45,
+          rx: width * (0.3 + refractionField * 0.12),
+          ry: height * (0.36 + depth * 0.08),
+          color: hexToRgba(palette.surface, 0.025 + refractionField * 0.035),
+          blur: width * 0.08,
+          composite: "screen",
+        });
+        addVignette(ctx, width, height, palette.ink, 0.08 + refractionField * 0.09);
+      }
+
       function drawReededFieldBase(ctx, width, height, palette, currentState, composition) {
         const layer = createLayer(width, height);
         const ridgeDensity = currentState.advanced.ridgeDensity ?? 0.42;
@@ -4034,14 +4214,8 @@
         drawReededGlassBackplate(backgroundLayer.ctx, width, height, palette, currentState);
 
         const composition = buildReededFieldComposition(width, height, currentState, rng);
-        const usedWebgl = renderReededGlassPass(backgroundLayer.canvas, ctx, width, height, palette, currentState, composition);
-
-        if (!usedWebgl) {
-          ctx.drawImage(backgroundLayer.canvas, 0, 0);
-          drawReededGlassField2D(ctx, width, height, palette, currentState, composition);
-        }
-
-        drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
+        drawReededColumnDisplacement(ctx, backgroundLayer.canvas, width, height, palette, currentState, composition);
+        drawReededSvgMaterial(ctx, width, height, palette, currentState, composition);
       }
 
       function renderArtwork(ctx, outputWidth, outputHeight, currentState) {
@@ -4052,7 +4226,9 @@
         if (currentState.shapeMode === "reeded-column") {
           renderReededGlassMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
           drawAccentMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
-          drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          if (currentState.textureMode !== "prism-glass") {
+            drawTextureMode(ctx, outputWidth, outputHeight, palette, currentState, rng);
+          }
           drawArtworkFinishingPass(ctx, outputWidth, outputHeight, palette, currentState, rng);
           return;
         }
@@ -4245,6 +4421,7 @@
       }
 
       function initialize() {
+        ensureReededMaterialAsset();
         buildPresetButtons();
         buildSelectOptions();
         bindCommonControls();
