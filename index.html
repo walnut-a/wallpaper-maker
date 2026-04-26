@@ -2537,31 +2537,40 @@
         ctx.restore();
       }
 
-      function drawDiagonalAtmosphere(ctx, width, height, palette, currentState) {
+      function drawAtmosphericDepth(ctx, width, height, palette, currentState) {
         const contrast = currentState.advanced.tonalSplit ?? 0.58;
-        const shade = ctx.createLinearGradient(width * 0.08, height * 0.05, width * 0.92, height * 0.98);
+        const glow = currentState.advanced.glowRadius ?? 0.52;
+        const drift = currentState.advanced.lightDrift ?? 0.5;
+        const shade = ctx.createLinearGradient(width * 0.16, height * 0.05, width * 0.88, height * 0.98);
         shade.addColorStop(0, hexToRgba(palette.ink, 0.02));
-        shade.addColorStop(0.42, hexToRgba(palette.ink, 0.02 + contrast * 0.04));
-        shade.addColorStop(1, hexToRgba(palette.ink, 0.12 + contrast * 0.08));
+        shade.addColorStop(0.56, hexToRgba(palette.ink, 0.018 + contrast * 0.026));
+        shade.addColorStop(1, hexToRgba(palette.ink, 0.095 + contrast * 0.07));
         ctx.save();
         ctx.globalCompositeOperation = "multiply";
         ctx.fillStyle = shade;
         ctx.fillRect(0, 0, width, height);
         ctx.restore();
 
-        const lift = ctx.createLinearGradient(width * 0.08, height * 0.86, width * 0.78, height * 0.1);
-        lift.addColorStop(0, hexToRgba(palette.accent, 0));
-        lift.addColorStop(0.52, `rgba(255, 255, 255, ${0.035 + currentState.advanced.glowRadius * 0.04})`);
-        lift.addColorStop(1, hexToRgba(palette.surface, 0));
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.strokeStyle = lift;
-        ctx.lineWidth = width * (0.012 + currentState.complexity * 0.014);
-        ctx.beginPath();
-        ctx.moveTo(width * 0.06, height * 0.9);
-        ctx.bezierCurveTo(width * 0.3, height * 0.64, width * 0.48, height * 0.34, width * 0.82, height * 0.1);
-        ctx.stroke();
-        ctx.restore();
+        paintSoftEllipse(ctx, {
+          x: width * (0.46 + (drift - 0.5) * 0.1),
+          y: height * 0.48,
+          rx: width * (0.3 + glow * 0.18),
+          ry: height * (0.16 + glow * 0.08),
+          rotation: -0.04,
+          color: `rgba(255, 255, 255, ${0.025 + glow * 0.028})`,
+          blur: width * (0.055 + glow * 0.035),
+          composite: "soft-light",
+        });
+        paintSoftEllipse(ctx, {
+          x: width * (0.18 + drift * 0.12),
+          y: height * 0.82,
+          rx: width * (0.24 + glow * 0.12),
+          ry: height * 0.12,
+          rotation: -0.08,
+          color: hexToRgba(palette.accent, 0.04 + glow * 0.035),
+          blur: width * 0.075,
+          composite: "screen",
+        });
       }
 
       function drawMinimalFinishing(ctx, width, height, palette, currentState) {
@@ -2587,19 +2596,14 @@
           blur: width * 0.035,
           composite: "multiply",
         });
-        paintGradientRibbon(ctx, [
-          { x: width * 0.38, y: height * 0.2 },
-          { x: width * 0.5, y: height * 0.42 },
-          { x: width * 0.52, y: height * 0.66 },
-          { x: width * 0.62, y: height * 0.84 },
-        ], {
-          stops: [
-            { offset: 0, color: hexToRgba(palette.ink, 0) },
-            { offset: 0.42, color: hexToRgba(palette.ink, 0.055) },
-            { offset: 1, color: hexToRgba(palette.ink, 0) },
-          ],
-          lineWidth: Math.max(1, width * 0.005),
-          blur: width * 0.006,
+        paintSoftEllipse(ctx, {
+          x: width * 0.52,
+          y: height * 0.54,
+          rx: width * 0.16,
+          ry: height * 0.32,
+          rotation: -0.08,
+          color: hexToRgba(palette.ink, 0.035 + split * 0.025),
+          blur: width * 0.04,
           composite: "multiply",
         });
         paintSoftEllipse(ctx, {
@@ -2679,41 +2683,31 @@
           blur: width * 0.028,
           composite: "screen",
         });
-        paintGradientRibbon(ctx, [
-          { x: width * 0.02, y: height * 0.62 },
-          { x: width * 0.28, y: height * 0.52 },
-          { x: width * 0.58, y: height * 0.54 },
-          { x: width * 0.88, y: height * 0.42 },
-        ], {
-          stops: [
-            { offset: 0, color: hexToRgba(palette.accent, 0) },
-            { offset: 0.48, color: hexToRgba(palette.accent, 0.16) },
-            { offset: 1, color: hexToRgba(palette.surface, 0) },
-          ],
-          lineWidth: width * 0.1,
-          blur: width * 0.03,
+        paintSoftEllipse(ctx, {
+          x: width * 0.42,
+          y: height * 0.56,
+          rx: width * 0.36,
+          ry: height * 0.16,
+          rotation: -0.08,
+          color: hexToRgba(palette.accent, 0.08 + currentState.advanced.tonalSplit * 0.045),
+          blur: width * 0.06,
           composite: "screen",
         });
-        paintGradientRibbon(ctx, [
-          { x: width * 0.22, y: height * 0.22 },
-          { x: width * 0.48, y: height * 0.34 },
-          { x: width * 0.72, y: height * 0.28 },
-          { x: width * 0.92, y: height * 0.18 },
-        ], {
-          stops: [
-            { offset: 0, color: hexToRgba(palette.ink, 0) },
-            { offset: 0.5, color: hexToRgba(palette.ink, 0.08) },
-            { offset: 1, color: hexToRgba(palette.ink, 0) },
-          ],
-          lineWidth: width * 0.07,
-          blur: width * 0.024,
+        paintSoftEllipse(ctx, {
+          x: width * 0.64,
+          y: height * 0.3,
+          rx: width * 0.3,
+          ry: height * 0.11,
+          rotation: 0.04,
+          color: hexToRgba(palette.ink, 0.035 + currentState.advanced.tonalSplit * 0.025),
+          blur: width * 0.052,
           composite: "multiply",
         });
       }
 
       function drawArtworkFinishingPass(ctx, width, height, palette, currentState, rng) {
         if (currentState.shapeMode !== "reeded-column") {
-          drawDiagonalAtmosphere(ctx, width, height, palette, currentState);
+          drawAtmosphericDepth(ctx, width, height, palette, currentState);
         }
 
         if (currentState.shapeMode === "minimal-form") {
@@ -2765,52 +2759,36 @@
 
         const layer = createLayer(width, height);
         layer.ctx.globalCompositeOperation = "screen";
-        const streakCount = 28 + Math.round(warpDensity * 62);
 
-        for (let index = 0; index < streakCount; index += 1) {
-          const x = (rng() - 0.12) * width * 1.24;
-          const y = (rng() - 0.08) * height * 1.18;
-          const length = width * (0.24 + rng() * 0.88 + warpDensity * 0.34);
-          const thickness = width * (0.0008 + rng() * 0.0025 + warpDensity * 0.0028);
-          const blur = width * (0.004 + rng() * 0.014 + flareIntensity * 0.01);
+        for (let index = 0; index < 8; index += 1) {
           const accentMix = rng();
-          const streakColor = accentMix > 0.82
+          const cloudColor = accentMix > 0.76
             ? palette.accentSoft
-            : accentMix > 0.44
+            : accentMix > 0.38
               ? palette.accent
               : palette.surface;
-
-          layer.ctx.save();
-          layer.ctx.translate(x, y);
-          layer.ctx.rotate(warpAngle + (rng() - 0.5) * 0.18);
-          layer.ctx.filter = `blur(${blur}px)`;
-          const gradient = layer.ctx.createLinearGradient(-length * 0.5, 0, length * 0.5, 0);
-          gradient.addColorStop(0, hexToRgba(streakColor, 0));
-          gradient.addColorStop(0.18, hexToRgba(streakColor, 0.015 + flareIntensity * 0.035));
-          gradient.addColorStop(0.48, hexToRgba(streakColor, 0.07 + warpDensity * 0.08));
-          gradient.addColorStop(0.76, hexToRgba(streakColor, 0.025 + flareIntensity * 0.035));
-          gradient.addColorStop(1, hexToRgba(streakColor, 0));
-          layer.ctx.fillStyle = gradient;
-          layer.ctx.fillRect(-length * 0.5, -thickness * 0.5, length, thickness);
-          layer.ctx.restore();
+          paintSoftEllipse(layer.ctx, {
+            x: width * (0.08 + rng() * 0.84),
+            y: height * (0.08 + rng() * 0.84),
+            rx: width * (0.08 + rng() * 0.18 + warpDensity * 0.04),
+            ry: height * (0.05 + rng() * 0.14 + flareIntensity * 0.035),
+            rotation: (rng() - 0.5) * 0.4,
+            color: hexToRgba(cloudColor, 0.018 + flareIntensity * 0.035),
+            blur: width * (0.035 + rng() * 0.045 + softness * 0.035),
+            composite: "screen",
+          });
         }
 
         for (let index = 0; index < 3; index += 1) {
           const progress = index / 2;
-          paintGradientRibbon(layer.ctx, [
-            { x: width * (-0.12 + progress * 0.12), y: height * (0.86 - progress * 0.2) },
-            { x: width * (0.24 + progress * 0.18), y: height * (0.58 - progress * 0.12) },
-            { x: width * (0.7 + progress * 0.1), y: height * (0.24 + progress * 0.02) },
-            { x: width * 1.08, y: height * (0.1 + progress * 0.08) },
-          ], {
-            stops: [
-              { offset: 0, color: hexToRgba(palette.accent, 0) },
-              { offset: 0.46, color: hexToRgba(index === 1 ? palette.surface : palette.accent, 0.045 + flareIntensity * 0.035) },
-              { offset: 0.76, color: hexToRgba(palette.accentSoft, 0.028 + flareIntensity * 0.026) },
-              { offset: 1, color: hexToRgba(palette.surface, 0) },
-            ],
-            lineWidth: width * (0.065 + progress * 0.035),
-            blur: width * (0.035 + softness * 0.03),
+          paintSoftEllipse(layer.ctx, {
+            x: width * (0.24 + progress * 0.28),
+            y: height * (0.66 - progress * 0.18),
+            rx: width * (0.28 + flareIntensity * 0.14),
+            ry: height * (0.12 + progress * 0.05 + softness * 0.05),
+            rotation: -0.1 + progress * 0.08,
+            color: hexToRgba(index === 1 ? palette.surface : palette.accent, 0.06 + flareIntensity * 0.045),
+            blur: width * (0.08 + softness * 0.05),
             composite: "screen",
           });
         }
@@ -2833,28 +2811,23 @@
           paintSoftEllipse(layer.ctx, {
             x: rng() * width,
             y: rng() * height,
-            rx: width * (0.012 + rng() * 0.018),
-            ry: height * (0.06 + rng() * 0.1),
-            rotation: warpAngle + (rng() - 0.5) * 0.14,
+            rx: width * (0.035 + rng() * 0.06),
+            ry: height * (0.025 + rng() * 0.055),
+            rotation: (rng() - 0.5) * 0.5,
             color: hexToRgba(index % 2 === 0 ? palette.accentSoft : palette.surface, 0.035 + rng() * 0.045),
             blur: width * (0.018 + rng() * 0.026),
             composite: "screen",
           });
         }
 
-        paintGradientRibbon(layer.ctx, [
-          { x: width * 0.04, y: height * 0.98 },
-          { x: width * 0.22, y: height * 0.72 },
-          { x: width * 0.44, y: height * 0.42 },
-          { x: width * 0.64, y: height * 0.14 },
-        ], {
-          stops: [
-            { offset: 0, color: hexToRgba(palette.accent, 0) },
-            { offset: 0.5, color: hexToRgba(palette.surface, 0.07 + flareIntensity * 0.055) },
-            { offset: 1, color: hexToRgba(palette.accentSoft, 0) },
-          ],
-          lineWidth: width * (0.052 + flareIntensity * 0.026),
-          blur: width * (0.03 + flareIntensity * 0.025),
+        paintSoftEllipse(layer.ctx, {
+          x: width * 0.36,
+          y: height * 0.62,
+          rx: width * (0.26 + flareIntensity * 0.14),
+          ry: height * (0.14 + flareIntensity * 0.08),
+          rotation: -0.12,
+          color: hexToRgba(palette.surface, 0.055 + flareIntensity * 0.045),
+          blur: width * (0.08 + flareIntensity * 0.04),
           composite: "screen",
         });
 
@@ -3208,29 +3181,18 @@
         const curveTension = currentState.advanced.tetherTension ?? 0.72;
         const driftOffset = currentState.advanced.driftOffset ?? 0.46;
         const glow = currentState.advanced.glowRadius ?? 0.72;
-        const baseX = width * (0.22 + driftOffset * 0.2);
-        const baseY = height * (0.64 + (1 - driftOffset) * 0.08);
-        const reachX = width * (0.68 + membraneScale * 0.18);
-        const reachY = height * (0.2 + curveTension * 0.12);
 
         for (let index = 0; index < 4; index += 1) {
-          const offset = (index - 1.5) * height * (0.045 + membraneScale * 0.018);
-          const points = [
-            { x: width * -0.1, y: baseY + offset },
-            { x: width * 0.2, y: baseY - height * (0.13 + curveTension * 0.05) + offset * 0.5 },
-            { x: width * 0.5, y: height * (0.47 + (index - 1.5) * 0.045) },
-            { x: reachX, y: reachY + offset * 0.25 },
-            { x: width * 1.08, y: height * (0.14 + index * 0.045) },
-          ];
-          paintGradientRibbon(layer.ctx, points, {
-            stops: [
-              { offset: 0, color: hexToRgba(palette.accent, 0) },
-              { offset: 0.42, color: hexToRgba(index % 2 === 0 ? palette.accent : palette.accentSoft, 0.08 + glow * 0.06) },
-              { offset: 0.72, color: `rgba(255, 255, 255, ${0.035 + glow * 0.035})` },
-              { offset: 1, color: hexToRgba(palette.surface, 0) },
-            ],
-            lineWidth: width * (0.035 + membraneScale * 0.035 + index * 0.004),
-            blur: width * (0.018 + currentState.advanced.softness * 0.018),
+          const progress = index / 3;
+          const offset = (index - 1.5) * height * (0.03 + membraneScale * 0.014);
+          paintSoftEllipse(layer.ctx, {
+            x: width * (0.34 + progress * 0.13 + driftOffset * 0.08),
+            y: height * (0.54 - progress * 0.12) + offset,
+            rx: width * (0.22 + membraneScale * 0.16),
+            ry: height * (0.1 + glow * 0.05),
+            rotation: -0.08 + progress * 0.08,
+            color: hexToRgba(index % 2 === 0 ? palette.accent : palette.accentSoft, 0.055 + glow * 0.04),
+            blur: width * (0.07 + currentState.advanced.softness * 0.05),
             composite: "screen",
           });
         }
@@ -3270,18 +3232,14 @@
 
         for (let index = 0; index < 5; index += 1) {
           const progress = index / 4;
-          paintGradientRibbon(layer.ctx, [
-            { x: width * (0.1 + progress * 0.18), y: height * (0.92 - progress * 0.2) },
-            { x: width * (0.36 + progress * 0.12), y: height * (0.64 - progress * 0.14) },
-            { x: width * (0.64 + progress * 0.08), y: height * (0.36 - progress * 0.05) },
-          ], {
-            stops: [
-              { offset: 0, color: hexToRgba(palette.accent, 0) },
-              { offset: 0.48, color: hexToRgba(progress > 0.45 ? palette.accentSoft : palette.accent, 0.025 + glow * 0.03) },
-              { offset: 1, color: hexToRgba(palette.surface, 0) },
-            ],
-            lineWidth: Math.max(1, width * (0.003 + progress * 0.002)),
-            blur: width * 0.003,
+          paintSoftEllipse(layer.ctx, {
+            x: width * (0.22 + progress * 0.48),
+            y: height * (0.72 - progress * 0.28),
+            rx: width * (0.055 + glow * 0.035),
+            ry: height * (0.035 + glow * 0.026),
+            rotation: (progress - 0.5) * 0.24,
+            color: hexToRgba(progress > 0.45 ? palette.accentSoft : palette.accent, 0.018 + glow * 0.022),
+            blur: width * 0.026,
             composite: "screen",
           });
         }
@@ -3817,16 +3775,17 @@
           });
         }
         if (currentState.backgroundMode === "deep-cold" || currentState.textureMode === "honeycomb") {
-          const gradient = ctx.createLinearGradient(width * 0.14, height * 0.76, width * 0.76, height * 0.24);
-          gradient.addColorStop(0, hexToRgba(palette.surface, 0));
-          gradient.addColorStop(0.5, hexToRgba(palette.accent, 0.2));
-          gradient.addColorStop(1, hexToRgba(palette.surface, 0));
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = 5 + currentState.advanced.glowRadius * 10;
-          ctx.beginPath();
-          ctx.moveTo(width * 0.18, height * 0.82);
-          ctx.lineTo(width * 0.74, height * 0.28);
-          ctx.stroke();
+          const glow = currentState.advanced.glowRadius ?? 0.5;
+          paintSoftEllipse(ctx, {
+            x: width * 0.46,
+            y: height * 0.56,
+            rx: width * (0.24 + glow * 0.12),
+            ry: height * (0.1 + glow * 0.06),
+            rotation: -0.18,
+            color: hexToRgba(palette.accent, 0.08 + glow * 0.06),
+            blur: width * 0.075,
+            composite: "screen",
+          });
           paintSoftEllipse(ctx, {
             x: width * 0.54,
             y: height * 0.52,
