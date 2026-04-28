@@ -989,12 +989,12 @@
         "reeded-column": {
           label: "长虹玻璃柱面",
           defaults: {
-            ridgeDensity: 0.38,
-            ridgeBreath: 0.6,
-            refractionField: 0.4,
-            focusField: 0.5,
-            fieldBlend: 0.66,
-            glassDepth: 0.52,
+            ridgeDensity: 0.32,
+            ridgeBreath: 0.78,
+            refractionField: 0.34,
+            focusField: 0.46,
+            fieldBlend: 0.78,
+            glassDepth: 0.46,
           },
           groups: [
             {
@@ -1242,17 +1242,17 @@
             complexity: 0.66,
             advanced: {
               softness: 0.5,
-              ridgeDensity: 0.38,
-              ridgeBreath: 0.6,
-              refractionField: 0.4,
-              focusField: 0.5,
-              fieldBlend: 0.66,
-              glassDepth: 0.52,
-              glowRadius: 0.58,
-              tonalSplit: 0.58,
-              prismStrength: 0.18,
-              bandSoftness: 0.64,
-              grainFine: 0.12,
+              ridgeDensity: 0.32,
+              ridgeBreath: 0.78,
+              refractionField: 0.34,
+              focusField: 0.46,
+              fieldBlend: 0.78,
+              glassDepth: 0.46,
+              glowRadius: 0.54,
+              tonalSplit: 0.5,
+              prismStrength: 0.1,
+              bandSoftness: 0.72,
+              grainFine: 0.07,
             },
           },
         },
@@ -2007,13 +2007,13 @@
             float fieldBlend = clamp(u_fieldBlend, 0.0, 1.0);
             float glassDepth = clamp(u_glassDepth, 0.0, 1.0);
 
-            float ridgeCount = mix(9.0, 20.0, density);
+            float ridgeCount = mix(7.5, 15.5, density);
             float ridgeUnit = uv.x * ridgeCount + u_phase.y * 0.1591549;
             float ridgeCell = fract(ridgeUnit);
             float ridgeCenter = ridgeCell * 2.0 - 1.0;
             float cylinderFace = sqrt(max(0.0, 1.0 - ridgeCenter * ridgeCenter));
-            float normalFloor = mix(0.42, 0.72, ridgeSoftness);
-            float normalX = clamp(ridgeCenter / max(cylinderFace, normalFloor), -0.82, 0.82);
+            float normalFloor = mix(0.54, 0.82, ridgeSoftness);
+            float normalX = clamp(ridgeCenter / max(cylinderFace, normalFloor), -0.62, 0.62);
 
             float focusMask = 0.0;
             float focusDrift = 0.0;
@@ -2028,35 +2028,43 @@
             }
             focusMask = clamp(focusMask, 0.0, 1.0);
 
-            float amplitude = (0.0012 + refraction * 0.0065 + glassDepth * 0.0036) * (0.76 + focusMask * (0.2 + focusStrength * 0.08));
-            float dispX = normalX * amplitude + focusDrift * (0.045 + glassDepth * 0.048);
+            float amplitude = (0.0009 + refraction * 0.0048 + glassDepth * 0.0024) * (0.66 + focusMask * (0.14 + focusStrength * 0.05));
+            float dispX = normalX * amplitude + focusDrift * (0.03 + glassDepth * 0.032);
 
             vec2 sampleUv = clamp(uv + vec2(dispX, 0.0), vec2(0.001), vec2(0.999));
-            vec2 chroma = vec2(dispX, 0.0) * (0.14 + glassDepth * 0.2);
+            vec2 chroma = vec2(dispX, 0.0) * (0.08 + glassDepth * 0.12);
             float red = texture2D(u_source, clamp(sampleUv + chroma * 0.34, vec2(0.001), vec2(0.999))).r;
             float green = texture2D(u_source, sampleUv).g;
             float blue = texture2D(u_source, clamp(sampleUv - chroma * 0.28, vec2(0.001), vec2(0.999))).b;
-            vec3 sourceColor = vec3(red, green, blue);
+            vec3 prismColor = vec3(red, green, blue);
+            float satinBlur = 0.0007 + fieldBlend * 0.0014 + ridgeSoftness * 0.0011;
+            vec3 centered = texture2D(u_source, sampleUv).rgb;
+            vec3 satinColor = centered * 0.48
+              + texture2D(u_source, clamp(sampleUv + vec2(satinBlur, 0.0), vec2(0.001), vec2(0.999))).rgb * 0.26
+              + texture2D(u_source, clamp(sampleUv - vec2(satinBlur, 0.0), vec2(0.001), vec2(0.999))).rgb * 0.26;
+            vec3 sourceColor = mix(prismColor, satinColor, 0.34 + fieldBlend * 0.3);
 
-            float ridgeHighlight = pow(cylinderFace, 1.95 + (1.0 - fieldBlend) * 0.26);
-            float edgeLine = smoothstep(0.5, 0.88, abs(ridgeCenter)) * (1.0 - smoothstep(0.88, 1.0, abs(ridgeCenter)));
-            float orderedCaustic = pow(cylinderFace, 5.0 + glassDepth * 1.9);
-            float ridgeShadow = smoothstep(0.58, 1.0, abs(ridgeCenter)) * (0.24 + (1.0 - cylinderFace) * 0.18);
-            float glow = ridgeHighlight * (0.014 + refraction * 0.021 + glassDepth * 0.016)
-              + edgeLine * (0.003 + glassDepth * 0.007)
-              + orderedCaustic * (0.004 + focusMask * 0.006 + glassDepth * 0.006)
-              + focusMask * (0.014 + focusStrength * 0.023);
-            float veil = 0.04 + fieldBlend * 0.074 + focusMask * 0.026;
+            float satinMod = 0.92 + 0.08 * sin(uv.x * 6.2831853 * 2.0 + 0.32);
+            float ridgeHighlight = pow(cylinderFace, 1.62 + (1.0 - fieldBlend) * 0.18) * satinMod;
+            float edgeLine = smoothstep(0.62, 0.92, abs(ridgeCenter)) * (1.0 - smoothstep(0.92, 1.0, abs(ridgeCenter)));
+            edgeLine *= 0.28 + (1.0 - ridgeSoftness) * 0.18;
+            float orderedCaustic = pow(cylinderFace, 6.2 + glassDepth * 2.4) * 0.58;
+            float ridgeShadow = smoothstep(0.64, 1.0, abs(ridgeCenter)) * (0.12 + (1.0 - cylinderFace) * 0.12) * (0.62 - fieldBlend * 0.22);
+            float glow = ridgeHighlight * (0.009 + refraction * 0.013 + glassDepth * 0.01)
+              + edgeLine * (0.0015 + glassDepth * 0.003)
+              + orderedCaustic * (0.002 + focusMask * 0.003 + glassDepth * 0.003)
+              + focusMask * (0.011 + focusStrength * 0.016);
+            float veil = 0.058 + fieldBlend * 0.088 + focusMask * 0.02;
 
             vec3 tint = mix(u_surfaceColor, u_accentColor, 0.28 + focusMask * 0.2);
             vec3 color = sourceColor;
             color += tint * glow;
-            color += vec3(1.0, 0.94, 0.84) * edgeLine * (0.002 + glassDepth * 0.005);
-            color += vec3(0.82, 0.92, 1.0) * orderedCaustic * (0.003 + refraction * 0.006);
+            color += vec3(1.0, 0.94, 0.84) * edgeLine * (0.001 + glassDepth * 0.002);
+            color += vec3(0.82, 0.92, 1.0) * orderedCaustic * (0.0015 + refraction * 0.003);
             color = mix(color, mix(color, tint, 0.14), veil * 0.46);
-            color -= u_inkColor * ridgeShadow * (0.004 + (1.0 - fieldBlend) * 0.006 + glassDepth * 0.005);
+            color -= u_inkColor * ridgeShadow * (0.002 + (1.0 - fieldBlend) * 0.003 + glassDepth * 0.002);
 
-            float contrast = 1.0 + refraction * 0.045 + focusMask * 0.035 + glassDepth * 0.012;
+            float contrast = 1.0 + refraction * 0.022 + focusMask * 0.018 + glassDepth * 0.006;
             color = (color - 0.5) * contrast + 0.5;
             color = clamp(color, 0.0, 1.0);
 
@@ -3345,8 +3353,8 @@
       }
 
       function getReededRidgeStep(width, ridgeDensity) {
-        const targetStep = width * (0.04 + (1 - ridgeDensity) * 0.066);
-        const ridgeCount = Math.max(12, Math.round(width / Math.max(1, targetStep)));
+        const targetStep = width * (0.048 + (1 - ridgeDensity) * 0.078);
+        const ridgeCount = Math.max(10, Math.round(width / Math.max(1, targetStep)));
         return width / ridgeCount;
       }
 
