@@ -2007,8 +2007,8 @@
             float fieldBlend = clamp(u_fieldBlend, 0.0, 1.0);
             float glassDepth = clamp(u_glassDepth, 0.0, 1.0);
 
-            float freq = mix(22.0, 64.0, density);
-            float ridgeUnit = uv.x * freq / 6.2831853 + u_phase.y * 0.1591549;
+            float ridgeCount = mix(10.0, 24.0, density);
+            float ridgeUnit = uv.x * ridgeCount + u_phase.y * 0.1591549;
             float ridgeCell = fract(ridgeUnit);
             float ridgeCenter = ridgeCell * 2.0 - 1.0;
             float cylinderFace = sqrt(max(0.0, 1.0 - ridgeCenter * ridgeCenter));
@@ -2028,7 +2028,7 @@
             }
             focusMask = clamp(focusMask, 0.0, 1.0);
 
-            float amplitude = (0.0014 + refraction * 0.008 + glassDepth * 0.005) * (0.76 + focusMask * (0.42 + focusStrength * 0.18));
+            float amplitude = (0.002 + refraction * 0.012 + glassDepth * 0.007) * (0.82 + focusMask * (0.36 + focusStrength * 0.16));
             float dispX = normalX * amplitude + focusDrift * (0.08 + glassDepth * 0.1);
 
             vec2 sampleUv = clamp(uv + vec2(dispX, 0.0), vec2(0.001), vec2(0.999));
@@ -2038,23 +2038,23 @@
             float blue = texture2D(u_source, clamp(sampleUv - chroma * 0.28, vec2(0.001), vec2(0.999))).b;
             vec3 sourceColor = vec3(red, green, blue);
 
-            float ridgeHighlight = pow(cylinderFace, 4.2 + (1.0 - fieldBlend) * 0.8);
-            float edgeLine = smoothstep(0.64, 0.96, abs(ridgeCenter)) * (1.0 - smoothstep(0.96, 1.0, abs(ridgeCenter)));
-            float orderedCaustic = pow(cylinderFace, 9.0 + glassDepth * 5.0);
-            float ridgeShadow = smoothstep(0.58, 1.0, abs(ridgeCenter)) * (0.55 + (1.0 - cylinderFace) * 0.45);
-            float glow = ridgeHighlight * (0.02 + refraction * 0.028 + glassDepth * 0.026)
-              + edgeLine * (0.012 + glassDepth * 0.024)
-              + orderedCaustic * (0.004 + focusMask * 0.012 + glassDepth * 0.01)
+            float ridgeHighlight = pow(cylinderFace, 2.8 + (1.0 - fieldBlend) * 0.6);
+            float edgeLine = smoothstep(0.68, 0.94, abs(ridgeCenter)) * (1.0 - smoothstep(0.94, 1.0, abs(ridgeCenter)));
+            float orderedCaustic = pow(cylinderFace, 7.0 + glassDepth * 3.8);
+            float ridgeShadow = smoothstep(0.5, 1.0, abs(ridgeCenter)) * (0.62 + (1.0 - cylinderFace) * 0.5);
+            float glow = ridgeHighlight * (0.028 + refraction * 0.04 + glassDepth * 0.034)
+              + edgeLine * (0.02 + glassDepth * 0.032)
+              + orderedCaustic * (0.008 + focusMask * 0.014 + glassDepth * 0.014)
               + focusMask * (0.022 + focusStrength * 0.042);
             float veil = 0.025 + fieldBlend * 0.065 + focusMask * 0.035;
 
             vec3 tint = mix(u_surfaceColor, u_accentColor, 0.28 + focusMask * 0.2);
             vec3 color = sourceColor;
             color += tint * glow;
-            color += vec3(1.0, 0.9, 0.76) * edgeLine * (0.008 + glassDepth * 0.018);
-            color += vec3(0.8, 0.92, 1.0) * orderedCaustic * (0.004 + refraction * 0.01);
-            color = mix(color, mix(color, tint, 0.18), veil * 0.45);
-            color -= u_inkColor * ridgeShadow * (0.01 + (1.0 - fieldBlend) * 0.018 + glassDepth * 0.012);
+            color += vec3(1.0, 0.92, 0.78) * edgeLine * (0.014 + glassDepth * 0.024);
+            color += vec3(0.8, 0.92, 1.0) * orderedCaustic * (0.006 + refraction * 0.014);
+            color = mix(color, mix(color, tint, 0.16), veil * 0.34);
+            color -= u_inkColor * ridgeShadow * (0.018 + (1.0 - fieldBlend) * 0.024 + glassDepth * 0.018);
 
             float contrast = 1.0 + refraction * 0.12 + focusMask * 0.08 + glassDepth * 0.035;
             color = (color - 0.5) * contrast + 0.5;
@@ -3345,7 +3345,7 @@
       }
 
       function getReededRidgeStep(width, ridgeDensity) {
-        const targetStep = width * (0.018 + (1 - ridgeDensity) * 0.032);
+        const targetStep = width * (0.034 + (1 - ridgeDensity) * 0.06);
         const ridgeCount = Math.max(12, Math.round(width / Math.max(1, targetStep)));
         return width / ridgeCount;
       }
@@ -3406,21 +3406,6 @@
         return `
           <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
             <defs>
-              <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#0d1420" stop-opacity="0.1"/>
-                <stop offset="0.16" stop-color="#ffffff" stop-opacity="0.07"/>
-                <stop offset="0.34" stop-color="#ffffff" stop-opacity="0.18"/>
-                <stop offset="0.5" stop-color="#9ec4d7" stop-opacity="0.06"/>
-                <stop offset="0.68" stop-color="#ffffff" stop-opacity="0.14"/>
-                <stop offset="0.86" stop-color="#0d1420" stop-opacity="0.06"/>
-                <stop offset="1" stop-color="#0d1420" stop-opacity="0.12"/>
-              </linearGradient>
-              <pattern id="reed" width="48" height="1920" patternUnits="userSpaceOnUse">
-                <rect width="48" height="1920" fill="url(#ridge)"/>
-                <rect x="22.5" width="3" height="1920" fill="#ffffff" opacity="0.12"/>
-                <rect x="2" width="1.5" height="1920" fill="#101522" opacity="0.07"/>
-                <rect x="44" width="1.5" height="1920" fill="#ffffff" opacity="0.07"/>
-              </pattern>
               <filter id="soften" x="-4%" y="-1%" width="108%" height="102%">
                 <feGaussianBlur stdDeviation="0.18"/>
               </filter>
@@ -3437,7 +3422,6 @@
                 <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
               </radialGradient>
             </defs>
-            <rect width="1080" height="1920" fill="url(#reed)" filter="url(#soften)" opacity="0.68"/>
             <rect width="1080" height="1920" fill="url(#verticalVeil)"/>
             <rect width="1080" height="1920" fill="url(#wideSpecular)" opacity="0.58"/>
           </svg>
@@ -3539,8 +3523,6 @@
           ctx.globalAlpha = 0.1 + depth * 0.08;
           ctx.drawImage(asset.image, 0, 0, width, height);
           ctx.restore();
-        } else {
-          drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
         }
 
         composition.focusZones.forEach((zone, index) => {
@@ -4271,7 +4253,11 @@
         drawReededGlassBackplate(backgroundLayer.ctx, width, height, palette, currentState);
 
         const composition = buildReededFieldComposition(width, height, currentState, rng);
-        drawReededColumnDisplacement(ctx, backgroundLayer.canvas, width, height, palette, currentState, composition);
+        const usedShader = renderReededGlassPass(backgroundLayer.canvas, ctx, width, height, palette, currentState, composition);
+        if (!usedShader) {
+          drawReededColumnDisplacement(ctx, backgroundLayer.canvas, width, height, palette, currentState, composition);
+          drawReededGlassMaterialOverlay(ctx, width, height, palette, currentState, composition);
+        }
         drawReededSvgMaterial(ctx, width, height, palette, currentState, composition);
       }
 
