@@ -582,11 +582,11 @@
         }
 
         .preview-stage {
-          padding: 0.75rem;
+          padding: 0.9rem 0.75rem 1.05rem;
         }
 
         .preview-stage::before {
-          inset: 0.75rem;
+          inset: 0.85rem;
         }
       }
 
@@ -610,11 +610,11 @@
         }
 
         .preview-stage {
-          padding: 0.7rem;
+          padding: 0.95rem 0.7rem 1.1rem;
         }
 
         .preview-stage::before {
-          inset: 0.7rem;
+          inset: 0.85rem 0.7rem;
         }
       }
     </style>
@@ -4283,8 +4283,14 @@
 
       function computePreviewSurface() {
         const stageRect = elements.previewStage.getBoundingClientRect();
-        const stageWidth = Math.max(stageRect.width - 52, 220);
-        const stageHeight = Math.max(stageRect.height - 52, 320);
+        const stageStyle = window.getComputedStyle(elements.previewStage);
+        const paddingX = parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
+        const paddingY = parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
+        const rowGap = parseFloat(stageStyle.rowGap) || 0;
+        const metaRect = elements.previewStage.querySelector(".preview-meta")?.getBoundingClientRect();
+        const innerAir = Math.max(18, Math.min(34, stageRect.height * 0.045));
+        const stageWidth = Math.max(stageRect.width - paddingX - innerAir * 2, 220);
+        const stageHeight = Math.max(stageRect.height - paddingY - rowGap - (metaRect?.height ?? 0) - innerAir * 2, 320);
         const ratio = state.width / state.height;
         let displayWidth = stageWidth;
         let displayHeight = displayWidth / ratio;
