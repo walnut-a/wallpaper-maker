@@ -2837,7 +2837,7 @@
         ctx.restore();
 
         drawFineSurfaceGrain(ctx, width, height, palette, currentState, rng);
-        if (currentState.backgroundMode === "warp-canopy" || currentState.textureMode === "stardust-sparks") {
+        if (currentState.shapeMode === "orbital-tether" || currentState.backgroundMode === "warp-canopy" || currentState.textureMode === "stardust-sparks") {
           applySubtleGradientDither(ctx, width, height, 2.1 + (currentState.advanced.grainFine ?? 0.12) * 1.4, currentState.seed + 8419);
         }
       }
@@ -3292,35 +3292,49 @@
 
       function drawOrbitalTetherGeometry(ctx, width, height, palette, currentState, rng) {
         const layer = createLayer(width, height);
-        const warpAngle = getWarpAngleRadians(currentState);
         const membraneScale = currentState.advanced.podScale ?? 0.58;
         const curveTension = currentState.advanced.tetherTension ?? 0.72;
         const driftOffset = currentState.advanced.driftOffset ?? 0.46;
         const glow = currentState.advanced.glowRadius ?? 0.72;
 
-        for (let index = 0; index < 4; index += 1) {
-          const progress = index / 3;
-          const offset = (index - 1.5) * height * (0.03 + membraneScale * 0.014);
-          paintSoftEllipse(layer.ctx, {
-            x: width * (0.34 + progress * 0.13 + driftOffset * 0.08),
-            y: height * (0.54 - progress * 0.12) + offset,
-            rx: width * (0.22 + membraneScale * 0.16),
-            ry: height * (0.1 + glow * 0.05),
-            rotation: -0.08 + progress * 0.08,
-            color: hexToRgba(index % 2 === 0 ? palette.accent : palette.accentSoft, 0.038 + glow * 0.03),
-            blur: width * (0.09 + currentState.advanced.softness * 0.055),
+        const membraneBands = [
+          { y: 0.56, lift: -0.16, color: palette.accent, alpha: 0.04 + glow * 0.026, width: 0.13, blur: 0.048 },
+          { y: 0.47, lift: -0.1, color: palette.accentSoft, alpha: 0.036 + glow * 0.022, width: 0.1, blur: 0.052 },
+          { y: 0.64, lift: 0.08, color: palette.surface, alpha: 0.026 + glow * 0.016, width: 0.12, blur: 0.056 },
+        ];
+
+        membraneBands.forEach((band, index) => {
+          const y = height * (band.y + (index - 1) * membraneScale * 0.018);
+          paintGradientRibbon(layer.ctx, [
+            { x: width * -0.1, y: y + height * 0.08 },
+            { x: width * (0.18 + driftOffset * 0.05), y: y + height * band.lift },
+            { x: width * (0.52 + driftOffset * 0.08), y: y + height * (band.lift * -0.35) },
+            { x: width * 1.06, y: y - height * 0.05 },
+          ], {
+            stops: [
+              { offset: 0, color: hexToRgba(band.color, 0) },
+              { offset: 0.5, color: hexToRgba(band.color, band.alpha) },
+              { offset: 1, color: hexToRgba(band.color, 0) },
+            ],
+            lineWidth: width * (band.width + membraneScale * 0.04),
+            blur: width * (band.blur + (currentState.advanced.softness ?? 0.42) * 0.02),
             composite: "screen",
           });
-        }
+        });
 
-        paintSoftEllipse(layer.ctx, {
-          x: width * (0.44 + driftOffset * 0.18),
-          y: height * 0.58,
-          rx: width * (0.24 + membraneScale * 0.1),
-          ry: height * 0.28,
-          rotation: warpAngle * 0.36,
-          color: hexToRgba(palette.ink, 0.08 + currentState.advanced.tonalSplit * 0.035),
-          blur: width * 0.08,
+        paintGradientRibbon(layer.ctx, [
+          { x: width * -0.08, y: height * 0.76 },
+          { x: width * (0.18 + driftOffset * 0.06), y: height * 0.66 },
+          { x: width * (0.58 + driftOffset * 0.1), y: height * 0.72 },
+          { x: width * 1.08, y: height * 0.58 },
+        ], {
+          stops: [
+            { offset: 0, color: hexToRgba(palette.ink, 0) },
+            { offset: 0.52, color: hexToRgba(palette.ink, 0.045 + currentState.advanced.tonalSplit * 0.025) },
+            { offset: 1, color: hexToRgba(palette.ink, 0) },
+          ],
+          lineWidth: width * (0.15 + membraneScale * 0.05),
+          blur: width * 0.06,
           composite: "multiply",
         });
 
