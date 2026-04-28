@@ -883,20 +883,6 @@
             },
           ],
         },
-        "glass-diffuse": {
-          label: "玻璃漫反射",
-          defaults: {
-            bandSoftness: 0.56,
-          },
-          groups: [
-            {
-              title: "背景控制",
-              controls: [
-                { key: "bandSoftness", label: "雾化程度", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
-        },
         "warp-canopy": {
           label: "跃迁星幕",
           defaults: {
@@ -982,30 +968,6 @@
                 { key: "drift", label: "漂移幅度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
                 { key: "stretch", label: "流向拉伸", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
                 { key: "veil", label: "纱幕透明度", min: 0.05, max: 0.72, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
-        },
-        "reeded-column": {
-          label: "长虹玻璃柱面",
-          defaults: {
-            ridgeDensity: 0.32,
-            ridgeBreath: 0.78,
-            refractionField: 0.34,
-            focusField: 0.46,
-            fieldBlend: 0.78,
-            glassDepth: 0.46,
-          },
-          groups: [
-            {
-              title: "主体控制",
-              controls: [
-                { key: "ridgeDensity", label: "棱线密度", min: 0.16, max: 0.9, step: 0.01, format: "percent" },
-                { key: "ridgeBreath", label: "棱面柔度", min: 0.08, max: 0.92, step: 0.01, format: "percent" },
-                { key: "refractionField", label: "全局折射", min: 0.12, max: 0.95, step: 0.01, format: "percent" },
-                { key: "focusField", label: "局部增强", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
-                { key: "fieldBlend", label: "雾场融合", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
-                { key: "glassDepth", label: "玻璃厚度", min: 0.08, max: 0.95, step: 0.01, format: "percent" },
               ],
             },
           ],
@@ -1111,20 +1073,6 @@
           defaults: {},
           groups: [],
         },
-        "prism-glass": {
-          label: "玻璃肌理",
-          defaults: {
-            prismStrength: 0.24,
-          },
-          groups: [
-            {
-              title: "纹理控制",
-              controls: [
-                { key: "prismStrength", label: "玻璃肌理", min: 0.04, max: 0.82, step: 0.01, format: "percent" },
-              ],
-            },
-          ],
-        },
         "stardust-sparks": {
           label: "微光颗粒",
           defaults: {
@@ -1227,32 +1175,6 @@
               drift: 0.58,
               stretch: 0.58,
               veil: 0.22,
-            },
-          },
-        },
-        "reeded-glass": {
-          label: "长虹玻璃感",
-          note: "像隔着带棱线的玻璃看颜色，既有竖向秩序，也有一点折射和雾感。",
-          backgroundMode: "glass-diffuse",
-          shapeMode: "reeded-column",
-          textureMode: "prism-glass",
-          defaults: {
-            palette: "amberglass",
-            density: 0.54,
-            complexity: 0.66,
-            advanced: {
-              softness: 0.5,
-              ridgeDensity: 0.32,
-              ridgeBreath: 0.78,
-              refractionField: 0.34,
-              focusField: 0.46,
-              fieldBlend: 0.78,
-              glassDepth: 0.46,
-              glowRadius: 0.54,
-              tonalSplit: 0.5,
-              prismStrength: 0.1,
-              bandSoftness: 0.72,
-              grainFine: 0.07,
             },
           },
         },
@@ -1713,17 +1635,13 @@
           backgrounds: ["soft-atmosphere", "warm-cool-split"],
           textures: ["fine-grain", "none"],
         },
-        "reeded-column": {
-          backgrounds: ["glass-diffuse", "soft-atmosphere"],
-          textures: ["prism-glass", "fine-grain"],
-        },
         "arched-pillars": {
-          backgrounds: ["soft-atmosphere", "glass-diffuse", "deep-cold"],
-          textures: ["light-grid", "fine-grain", "prism-glass"],
+          backgrounds: ["soft-atmosphere", "deep-cold", "warm-cool-split"],
+          textures: ["light-grid", "fine-grain", "none"],
         },
         "mirror-slices": {
-          backgrounds: ["deep-cold", "glass-diffuse", "warm-cool-split"],
-          textures: ["prism-glass", "fine-grain", "light-grid"],
+          backgrounds: ["deep-cold", "warm-cool-split", "soft-atmosphere"],
+          textures: ["fine-grain", "light-grid", "satin-flow"],
         },
         "orbital-tether": {
           backgrounds: ["warp-canopy", "deep-cold", "warm-cool-split"],
@@ -4654,7 +4572,6 @@
       }
 
       function initialize() {
-        ensureReededMaterialAsset();
         buildPresetButtons();
         buildSelectOptions();
         bindCommonControls();
