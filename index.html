@@ -3404,6 +3404,87 @@
         });
       }
 
+      function drawReededRefractionScene(ctx, width, height, palette, currentState) {
+        const layer = createLayer(width, height);
+        const sceneRng = makeRng(currentState.seed + 59281);
+        const blend = currentState.advanced.fieldBlend ?? 0.78;
+        const depth = currentState.advanced.glassDepth ?? 0.46;
+        const refraction = currentState.advanced.refractionField ?? 0.34;
+        const softness = currentState.advanced.softness ?? 0.5;
+
+        const planeBlur = width * (0.036 + blend * 0.034 + softness * 0.018);
+        const planes = [
+          { x: 0.08, y: 0.07, w: 0.22, h: 0.74, r: 0.08, color: palette.accent, alpha: 0.11 + depth * 0.04, composite: "screen" },
+          { x: 0.28, y: 0.18, w: 0.28, h: 0.7, r: 0.12, color: palette.surface, alpha: 0.09 + blend * 0.04, composite: "screen" },
+          { x: 0.58, y: 0.1, w: 0.2, h: 0.78, r: 0.1, color: palette.accentSoft, alpha: 0.08 + refraction * 0.04, composite: "screen" },
+          { x: 0.7, y: 0.28, w: 0.22, h: 0.56, r: 0.1, color: palette.ink, alpha: 0.05 + depth * 0.025, composite: "multiply" },
+        ];
+
+        planes.forEach((plane, index) => {
+          paintSoftRoundedRect(layer.ctx, {
+            x: width * (plane.x + (sceneRng() - 0.5) * 0.025),
+            y: height * (plane.y + (sceneRng() - 0.5) * 0.025),
+            width: width * plane.w,
+            height: height * plane.h,
+            radius: width * plane.r,
+            rotation: (sceneRng() - 0.5) * 0.08,
+            color: hexToRgba(plane.color, plane.alpha),
+            blur: planeBlur * (0.82 + index * 0.08),
+            composite: plane.composite,
+          });
+        });
+
+        for (let index = 0; index < 3; index += 1) {
+          const isShadow = index === 2;
+          const baseY = height * (0.24 + index * 0.24);
+          const amplitude = height * (0.025 + blend * 0.018);
+          const points = [];
+          const phase = sceneRng() * Math.PI * 2;
+          for (let pointIndex = 0; pointIndex <= 5; pointIndex += 1) {
+            const t = pointIndex / 5;
+            points.push({
+              x: width * (-0.12 + t * 1.24),
+              y: baseY + Math.sin(t * Math.PI * 1.35 + phase) * amplitude,
+            });
+          }
+          paintSoftRibbon(layer.ctx, points, {
+            color: hexToRgba(isShadow ? palette.ink : (index === 0 ? palette.surface : palette.accentSoft), isShadow ? 0.038 + depth * 0.02 : 0.06 + blend * 0.04),
+            lineWidth: width * (0.11 + refraction * 0.055),
+            blur: width * (0.036 + blend * 0.034),
+            composite: isShadow ? "multiply" : "screen",
+          });
+        }
+
+        const edgeCount = 4;
+        for (let index = 0; index < edgeCount; index += 1) {
+          const progress = (index + 1) / (edgeCount + 1);
+          const edgeWidth = width * (0.025 + sceneRng() * 0.02);
+          paintSoftRoundedRect(layer.ctx, {
+            x: width * (progress + (sceneRng() - 0.5) * 0.055) - edgeWidth * 0.5,
+            y: height * (0.08 + sceneRng() * 0.14),
+            width: edgeWidth,
+            height: height * (0.58 + sceneRng() * 0.22),
+            radius: edgeWidth * 0.8,
+            rotation: (sceneRng() - 0.5) * 0.045,
+            color: hexToRgba(index % 2 === 0 ? palette.surface : palette.ink, index % 2 === 0 ? 0.032 + blend * 0.018 : 0.018 + depth * 0.012),
+            blur: width * (0.028 + softness * 0.018),
+            composite: index % 2 === 0 ? "screen" : "multiply",
+          });
+        }
+
+        const veil = layer.ctx.createLinearGradient(0, 0, width, height);
+        veil.addColorStop(0, hexToRgba(palette.accentSoft, 0.024 + blend * 0.026));
+        veil.addColorStop(0.48, hexToRgba(palette.surface, 0.014 + refraction * 0.022));
+        veil.addColorStop(1, hexToRgba(palette.ink, 0.02 + depth * 0.018));
+        layer.ctx.save();
+        layer.ctx.globalCompositeOperation = "source-over";
+        layer.ctx.fillStyle = veil;
+        layer.ctx.fillRect(0, 0, width, height);
+        layer.ctx.restore();
+
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+
       const reededMaterialAsset = {
         image: null,
         ready: false,
@@ -4259,6 +4340,7 @@
         const backgroundLayer = createLayer(width, height);
         drawBackgroundMode(backgroundLayer.ctx, width, height, palette, currentState, rng);
         drawReededGlassBackplate(backgroundLayer.ctx, width, height, palette, currentState);
+        drawReededRefractionScene(backgroundLayer.ctx, width, height, palette, currentState);
 
         const composition = buildReededFieldComposition(width, height, currentState, rng);
         const usedShader = renderReededGlassPass(backgroundLayer.canvas, ctx, width, height, palette, currentState, composition);
