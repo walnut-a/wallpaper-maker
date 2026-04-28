@@ -503,6 +503,7 @@
         align-items: center;
         gap: 0.7rem;
         flex-wrap: wrap;
+        margin-bottom: clamp(1.3rem, 2.8vw, 2rem);
         padding: 0.55rem 0.78rem;
         border-radius: 999px;
         background: rgba(252, 248, 242, 0.7);
@@ -603,6 +604,7 @@
         .preview-meta {
           justify-content: space-between;
           border-radius: 18px;
+          margin-bottom: 1.55rem;
         }
 
         .preview-panel {
@@ -4287,10 +4289,15 @@
         const paddingX = parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
         const paddingY = parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
         const rowGap = parseFloat(stageStyle.rowGap) || 0;
-        const metaRect = elements.previewStage.querySelector(".preview-meta")?.getBoundingClientRect();
+        const metaElement = elements.previewStage.querySelector(".preview-meta");
+        const metaRect = metaElement?.getBoundingClientRect();
+        const metaStyle = metaElement ? window.getComputedStyle(metaElement) : null;
+        const metaMarginY = metaStyle
+          ? (parseFloat(metaStyle.marginTop) || 0) + (parseFloat(metaStyle.marginBottom) || 0)
+          : 0;
         const innerAir = Math.max(18, Math.min(34, stageRect.height * 0.045));
         const stageWidth = Math.max(stageRect.width - paddingX - innerAir * 2, 220);
-        const stageHeight = Math.max(stageRect.height - paddingY - rowGap - (metaRect?.height ?? 0) - innerAir * 2, 320);
+        const stageHeight = Math.max(stageRect.height - paddingY - rowGap - (metaRect?.height ?? 0) - metaMarginY - innerAir * 2, 320);
         const ratio = state.width / state.height;
         let displayWidth = stageWidth;
         let displayHeight = displayWidth / ratio;
